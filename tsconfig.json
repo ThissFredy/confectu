@@ -29,7 +29,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    ".opencode/skills/client.ts"
+    "lib/supabase/client.ts"
   ],
   "exclude": ["node_modules"]
 }
