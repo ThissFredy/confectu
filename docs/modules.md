@@ -84,7 +84,20 @@ internas de otro módulo.
 
 ### 4.1 `modules/auth/`
 
-Responsabilidad: autenticación, autorización y contexto de cuenta.
+- **Título:** Autenticación, autorización y contexto de cuenta.
+- **Descripción:** Gestiona el acceso de usuarios mediante Google OAuth, la
+creación del perfil de taller asociado a `auth.users.id`, la resolución del rol
+(`ADMIN` o `CLIENT`), el estado de la cuenta y la protección de rutas privadas.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Iniciar y cerrar sesión con Google OAuth.
+  - Acceder a la aplicación solo si su cuenta está activa.
+  - Como `ADMIN`, listar cuentas `CLIENT` y activarlas o desactivarlas.
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** Login con Google OAuth, callback `/api/auth/callback`,
+proxy de protección de rutas, onboarding de taller, layouts privado y
+admin, y Server Actions de logout y configuración inicial están implementados.
+La columna `profiles.workshop_setup_completed` y la función atómica
+`complete_workshop_setup` garantizan un solo taller por usuario.
 
 Estructura esperada:
 
@@ -97,15 +110,6 @@ modules/auth/
 └── validations.ts
 ```
 
-Capacidades:
-
-- Iniciar sesión y cerrar sesión con Google OAuth.
-- Obtener el usuario autenticado en el servidor.
-- Crear o actualizar el perfil de taller asociado a `auth.users.id`.
-- Resolver el rol global (`ADMIN` o `CLIENT`) y el estado de la cuenta.
-- Proteger rutas privadas y rechazar acciones sin sesión válida.
-- Permitir a `ADMIN` listar y activar/desactivar cuentas `CLIENT`.
-
 Entidades sugeridas:
 
 - `profiles`: `id`, `role`, `is_active`, `created_at`, `updated_at`.
@@ -116,16 +120,19 @@ validarse en el servidor.
 
 ### 4.2 `modules/clients/`
 
-Responsabilidad: personas atendidas por un taller. No confundir `CLIENT`, que
-es el rol del propietario del taller, con `CUSTOMER`, que es un registro de
-negocio.
-
-Capacidades:
-
-- Listar, buscar, crear, editar y desactivar clientes.
-- Asociar cada cliente a un `workshop_id`.
-- Asociar opcionalmente un tipo de documento del catálogo global.
-- Exponer `getClientById` y búsquedas limitadas al taller actual para facturas.
+- **Título:** Clientes atendidos por un taller.
+- **Descripción:** Administra las personas atendidas por un taller. No confundir
+`CLIENT`, que es el rol del propietario del taller, con `CUSTOMER`, que es un
+registro de negocio. Cada cliente pertenece a un único `workshop_id`.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Listar, buscar, crear, editar y desactivar clientes.
+  - Asociar opcionalmente un tipo de documento del catálogo global.
+  - Seleccionar un cliente existente o crear uno nuevo durante el flujo de
+    factura.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** La tabla `customers`, su índice y las políticas RLS están
+creadas en la migración inicial. Faltan componentes, Server Actions, consultas
+públicas (`getClientById`, búsquedas limitadas al taller) y pantallas.
 
 Entidades sugeridas:
 
@@ -142,15 +149,18 @@ distintos.
 
 ### 4.3 `modules/services/`
 
-Responsabilidad: catálogo de servicios, prendas y precios base.
-
-Capacidades:
-
-- CRUD de servicios del taller.
-- Activar/desactivar servicios sin borrar facturas históricas.
-- Guardar nombre, descripción, categoría opcional y precio base en COP.
-- Seleccionar servicios en una factura.
-- Permitir líneas personalizadas que no creen un registro en el catálogo.
+- **Título:** Catálogo de servicios, prendas y precios base.
+- **Descripción:** Permite crear y mantener servicios reutilizables para un
+taller. Una factura podrá seleccionar un servicio del catálogo o agregar una
+línea personalizada que no cree un registro en el catálogo.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Crear, editar, activar/desactivar y eliminar servicios del catálogo.
+  - Definir nombre, descripción, categoría opcional y precio base en COP.
+  - Seleccionar servicios del catálogo al armar una factura.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** La tabla `services`, índices y RLS están listos en la
+migración inicial. Falta todo el código de aplicación (componentes, Server
+Actions, consultas y rutas).
 
 Entidad sugerida:
 
@@ -163,16 +173,19 @@ el mismo precio.
 
 ### 4.4 `modules/workshops/`
 
-Responsabilidad: identidad y configuración del taller que se muestra en los
-comprobantes.
-
-Capacidades:
-
-- Editar nombre comercial, identificación fiscal opcional, teléfono, email y
-  dirección.
-- Configurar prefijo y consecutivo de facturas.
-- Guardar texto comercial, método de pago o instrucciones para el cliente.
-- Subir y reemplazar un logo opcional en Supabase Storage.
+- **Título:** Configuración e identidad del taller.
+- **Descripción:** Administra la información del taller que se muestra en los
+comprobantes: nombre comercial, datos de contacto, identificación fiscal,
+prefijo y consecutivo de facturas, instrucciones de pago y logo opcional.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Configurar los datos comerciales del taller.
+  - Definir el prefijo y el siguiente número de factura.
+  - Establecer texto de condiciones o instrucciones de pago.
+  - Subir y reemplazar un logo opcional en Supabase Storage.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** La tabla `workshop_settings` y sus restricciones están
+listas. Falta la interfaz de configuración, la gestión del logo en Storage y
+las validaciones de acceso en Server Actions.
 
 Entidades sugeridas:
 
@@ -183,20 +196,43 @@ Entidades sugeridas:
 El consecutivo debe reservarse en una operación server-side segura para evitar
 duplicados si se emiten dos facturas simultáneamente.
 
+**Feature futuro (no incluido en el spec de autenticación):** Subida de imagen
+del taller durante el onboarding. El formulario de onboarding del módulo
+`modules/auth/` actualmente captura solo `business_name` e `invoice_prefix`.
+Como evolución, se añadirá un campo opcional para subir una imagen del taller
+(logo o foto) que se almacenará en Supabase Storage y se referenciará en
+`workshop_settings.logo_path`. Este feature requiere:
+
+- Configurar un bucket privado en Supabase Storage.
+- Server Action que reciba `FormData` con un `File`, valide tipo y tamaño, y
+  suba el archivo a Storage.
+- Actualizar `workshop_settings.logo_path` con la ruta del archivo.
+- Políticas de Storage que permitan al owner del taller leer y escribir su
+  logo.
+- Reutilización de esta lógica desde el módulo `modules/workshops/` para
+  reemplazar el logo posteriormente.
+
 ### 4.5 `modules/invoices/`
 
-Responsabilidad: ciclo de vida, cálculo, persistencia y representación de
-comprobantes.
-
-Capacidades:
-
-- Crear y editar borradores.
-- Seleccionar un cliente activo y mostrar sus datos actuales.
-- Agregar servicios del catálogo o líneas personalizadas.
-- Recibir cantidad y precio COP por línea.
-- Aplicar impuestos, retenciones, descuentos y otros cobros opcionales.
-- Validar y recalcular todos los totales en el servidor antes de guardar.
-- Emitir, numerar, consultar, anular y descargar comprobantes.
+- **Título:** Ciclo de vida, cálculo y comprobantes de facturas.
+- **Descripción:** Gestiona el ciclo completo de una factura: borradores,
+selección de cliente, líneas de servicio o personalizadas, ajustes, cálculo
+server-side, emisión, numeración, anulación, historial y generación/descarga de
+PDF.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Crear y editar borradores de factura.
+  - Seleccionar un cliente activo y ver sus datos actuales.
+  - Agregar servicios del catálogo o líneas personalizadas con cantidad y
+    precio COP.
+  - Aplicar impuestos, retenciones, descuentos y cobros adicionales.
+  - Revisar subtotal, ajustes y total calculados por el servidor.
+  - Emitir, consultar, anular y descargar comprobantes en PDF.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** Las tablas `invoices`, `invoice_lines` e
+`invoice_adjustments`, junto con sus restricciones, índices y políticas RLS,
+están definidas en la migración inicial. Falta toda la lógica de aplicación,
+incluyendo el recálculo server-side, la reserva segura de consecutivos y la
+generación del PDF.
 
 Entidades sugeridas:
 
@@ -233,18 +269,19 @@ decimal exacto, nunca como cálculos flotantes del navegador.
 
 ### 4.6 `modules/dashboard/`
 
-Responsabilidad: resumen operativo del taller.
-
-Primera versión:
-
-- Total facturado por periodo.
-- Cantidad de facturas por estado.
-- Facturas recientes.
-- Clientes y servicios más utilizados, si las consultas son necesarias.
-
-Las consultas deben filtrar siempre por `workshop_id` y respetar RLS. Los
-reportes históricos y exportaciones pueden añadirse después sin cambiar el
-contrato de facturas.
+- **Título:** Resumen operativo del taller.
+- **Descripción:** Muestra indicadores y consultas agregadas sobre las facturas
+del taller. Debe reutilizar consultas públicas del módulo de facturas sin
+acceder directamente a tablas internas de otro módulo.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Ver el total facturado por periodo.
+  - Ver la cantidad de facturas por estado.
+  - Consultar las facturas recientes.
+  - Identificar clientes y servicios más utilizados, si las consultas son
+    necesarias.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** Depende de la implementación previa de `modules/invoices/`.
+No requiere tablas propias en el MVP.
 
 ## 5. Rutas de aplicación
 
