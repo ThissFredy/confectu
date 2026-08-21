@@ -17,6 +17,9 @@ importers:
       next:
         specifier: 16.3.0
         version: 16.3.0(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      nextjs-toast-notify:
+        specifier: ^1.62.0
+        version: 1.62.0
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -1149,6 +1152,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -1659,6 +1663,9 @@ packages:
         optional: true
       sass:
         optional: true
+
+  nextjs-toast-notify@1.62.0:
+    resolution: {integrity: sha512-2hn+DVYVxuNWKFXYwmvkEurxrX+8LdNSLy14sEXi4ylIvh0cVdMuJT5OyRaMej+xJnNpoEZfMp8S18V+qs+puQ==}
 
   node-exports-info@1.6.2:
     resolution: {integrity: sha512-kXs9Go0cah0qHVV2v389IXQLdLCeE1xfFtjOAF+iobu0OIoG1pje8At2vMHyaPMiPMnG/LWP50twML21eMcAag==}
@@ -3737,6 +3744,8 @@ snapshots:
       - '@babel/core'
       - '@types/node'
       - babel-plugin-macros
+
+  nextjs-toast-notify@1.62.0: {}
 
   node-exports-info@1.6.2:
     dependencies:

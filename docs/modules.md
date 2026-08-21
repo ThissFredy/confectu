@@ -25,6 +25,9 @@ lógica específica dentro de `modules/<module>/`.
 - Tipo de documento y número de documento son opcionales.
 - Los tipos de documento pertenecen a un catálogo global administrado por
   `ADMIN`.
+- `modules/admin/` agrupa la administración global de `ADMIN`: catálogo de
+  tipos de documento y gestión de talleres, clientes, configuración y
+  servicios de cualquier taller.
 - El catálogo de servicios permite servicios reutilizables y líneas
   personalizadas en una factura.
 - Las facturas se guardan como datos relacionales. El PDF se genera para su
@@ -79,6 +82,14 @@ detalle y generación/descarga del PDF.
 Implementar indicadores y consultas agregadas sobre facturas del taller. Este
 módulo debe reutilizar consultas públicas de facturas, sin acceder a tablas
 internas de otro módulo.
+
+### Fase 7: administración global
+
+Implementar `modules/admin/` con el CRUD de tipos de documento y la gestión de
+talleres, clientes, configuración y servicios de cualquier taller. El CRUD de
+tipos de documento puede iniciarse antes que el resto de submódulos porque es
+requisito del módulo de clientes; los submódulos de talleres, clientes y
+servicios dependen de que existan las entidades de negocio correspondientes.
 
 ## 4. Módulos
 
@@ -283,6 +294,143 @@ acceder directamente a tablas internas de otro módulo.
 - **Observaciones:** Depende de la implementación previa de `modules/invoices/`.
 No requiere tablas propias en el MVP.
 
+### 4.7 `modules/admin/`
+
+- **Título:** Administración global de Confectu.
+- **Descripción:** Agrupa la gestión que solo `ADMIN` puede realizar sobre
+catálogos globales y sobre talleres existentes. No pertenece a un taller;
+opera de forma transversal y valida siempre el rol `ADMIN` en el servidor.
+Contiene submódulos independientes, cada uno con sus componentes, Server
+Actions, consultas, tipos y validaciones.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Administrar el catálogo global de tipos de documento.
+  - Listar y gestionar clientes de cualquier taller.
+  - Desde un cliente, acceder a la gestión del taller al que pertenece: cuenta
+    del taller, configuración del taller y servicios del taller.
+  - Activar o desactivar talleres y administrar su configuración.
+  - Administrar los servicios de cualquier taller.
+- **Estado actual:** NO IMPLEMENTADO.
+- **Observaciones:** El layout `(admin)/admin` y `AdminHeader` ya existen. Las
+RLS actuales permiten a `ADMIN` leer y mutar `document_types`, `profiles`,
+`workshops`, `workshop_settings` y `customers`. Para administrar `services`
+se requiere ajustar las políticas RLS de `services` para permitir a `ADMIN`,
+ya que actualmente solo permiten al taller propietario. Todas las Server
+Actions deben validar rol `ADMIN`; en creación de clientes por `ADMIN`, el
+`workshop_id` se valida contra un taller existente seleccionado en el
+contexto admin, nunca se toma sin validación del formulario.
+
+Estructura esperada:
+
+```text
+modules/admin/
+├── document-types/
+│   ├── components/
+│   ├── actions.ts
+│   ├── queries.ts
+│   ├── types.ts
+│   └── validations.ts
+├── clients/
+│   ├── components/
+│   ├── actions.ts
+│   ├── queries.ts
+│   ├── types.ts
+│   └── validations.ts
+├── workshops/
+│   ├── components/
+│   ├── actions.ts
+│   ├── queries.ts
+│   ├── types.ts
+│   └── validations.ts
+└── services/
+    ├── components/
+    ├── actions.ts
+    ├── queries.ts
+    ├── types.ts
+    └── validations.ts
+```
+
+#### 4.7.1 `modules/admin/document-types/`
+
+- **Título:** Catálogo global de tipos de documento.
+- **Descripción:** CRUD del catálogo `document_types` administrado por
+`ADMIN`. Los talleres consultan este catálogo desde `modules/clients/`, pero
+no pueden mutarlo.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Listar, crear, editar y activar o desactivar tipos de documento.
+  - Definir `code` único y `name`.
+- **Entidades:**
+  - `document_types`: `id`, `code`, `name`, `is_active`, `created_at`,
+    `updated_at`.
+- **Reglas:**
+  - `code` es obligatorio y único globalmente.
+  - `name` es obligatorio.
+  - No se elimina físicamente: se desactiva para no romper clientes que
+    referencian el tipo. La eliminación física queda fuera del MVP.
+  - Las Server Actions validan rol `ADMIN` y devuelven `fieldErrors` por
+    campo.
+
+#### 4.7.2 `modules/admin/clients/`
+
+- **Título:** Clientes gestionados por `ADMIN`.
+- **Descripción:** CRUD transversal de `customers`. Permite a `ADMIN`
+gestionar clientes de cualquier taller y, desde el detalle de un cliente,
+navegar a la gestión del taller, la configuración del taller y los servicios
+del mismo.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Listar clientes de todos los talleres con búsqueda y filtro por taller.
+  - Crear, editar, desactivar y reactivar clientes seleccionando el taller al
+    que pertenecen.
+  - Desde el detalle de un cliente, acceder a `/admin/workshops/[workshopId]`
+    y a `/admin/services?workshopId=[workshopId]` del taller correspondiente.
+- **Entidades:**
+  - `customers`: mismas columnas que en `modules/clients/`.
+- **Reglas:**
+  - Las validaciones de campos son las mismas que en `modules/clients/`.
+  - `workshop_id` se valida contra un taller existente; no se confía en el
+    formulario sin verificación.
+  - La unicidad de documento por taller se mantiene igual.
+  - Las Server Actions validan rol `ADMIN` y pertenencia del `workshop_id`.
+
+#### 4.7.3 `modules/admin/workshops/`
+
+- **Título:** Talleres y configuración gestionados por `ADMIN`.
+- **Descripción:** Permite a `ADMIN` gestionar la cuenta del taller
+(`workshops`) y su configuración (`workshop_settings`) de cualquier taller.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Listar talleres y filtrar por estado.
+  - Activar o desactivar un taller.
+  - Editar nombre comercial, datos de contacto, identificación fiscal,
+    prefijo de factura, siguiente número de factura, instrucciones de pago y
+    logo opcional.
+- **Entidades:**
+  - `workshops`: `id`, `owner_id`, `is_active`, `created_at`, `updated_at`.
+  - `workshop_settings`: `workshop_id`, `business_name`, `tax_id`, `phone`,
+    `email`, `address`, `invoice_prefix`, `next_invoice_number`,
+    `payment_instructions`, `logo_path`, `created_at`, `updated_at`.
+- **Reglas:**
+  - `next_invoice_number` no puede disminuir.
+  - `invoice_prefix` mantiene `^[A-Z0-9]{1,3}$`.
+  - El logo se gestiona en Supabase Storage con políticas que permitan a
+    `ADMIN` leer y escribir.
+
+#### 4.7.4 `modules/admin/services/`
+
+- **Título:** Servicios gestionados por `ADMIN`.
+- **Descripción:** CRUD transversal de `services` de cualquier taller.
+- **Lo que se espera que pueda hacer el usuario:**
+  - Listar servicios de todos los talleres con filtro por taller.
+  - Crear, editar, activar o desactivar y eliminar servicios.
+  - Definir nombre, descripción, categoría opcional y precio base en COP.
+- **Entidades:**
+  - `services`: `id`, `workshop_id`, `name`, `description`, `category`,
+    `default_price_cop`, `is_active`, `created_at`, `updated_at`.
+- **Reglas:**
+  - Requiere migración de RLS para permitir a `ADMIN` leer y mutar
+    `services`.
+  - `default_price_cop` debe ser mayor o igual a `0`.
+  - `workshop_id` se valida contra un taller existente.
+  - Las Server Actions validan rol `ADMIN`.
+
 ## 5. Rutas de aplicación
 
 Las rutas viven en `app/` y solo actúan como entradas de pantalla. No deben
@@ -298,7 +446,15 @@ app/
 │   ├── new/
 │   └── [id]/
 ├── (private)/settings/
-└── (admin)/admin/document-types/
+└── (admin)/admin/
+    ├── document-types/
+    │   └── [id]/
+    ├── clients/
+    │   └── [id]/
+    ├── workshops/
+    │   └── [id]/
+    └── services/
+        └── [id]/
 ```
 
 Los nombres de grupos de rutas son orientativos; deben adaptarse a la
@@ -313,6 +469,9 @@ estructura existente sin crear una carpeta `src/` alternativa.
   pertenencia al taller y datos de entrada en el servidor.
 - Las operaciones que afectan varias entidades deben ser atómicas mediante una
   función SQL o una operación server-side equivalente.
+- `modules/admin/` valida rol `ADMIN` en todas sus Server Actions y no
+  sustituye a las RLS; las políticas deben permitir las operaciones admin
+  correspondientes.
 - Las facturas guardan snapshots de cliente y líneas cuando sea necesario para
   que el documento histórico no cambie al editar el catálogo.
 
@@ -341,7 +500,7 @@ estructura existente sin crear una carpeta `src/` alternativa.
 - El comprobante se puede descargar como PDF con los datos del taller, cliente,
   líneas, ajustes, totales, método de pago y logo si existe.
 - `ADMIN` puede activar/desactivar cuentas de talleres y administrar tipos de
-  documento.
+  documento, clientes, configuración y servicios de cualquier taller.
 - Las pantallas tienen estados de carga, vacío, éxito y error, y funcionan
   primero en móvil.
 

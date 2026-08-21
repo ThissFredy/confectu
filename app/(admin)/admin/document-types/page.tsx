@@ -1,26 +1,26 @@
 import { createClient } from "@/lib/supabase/server";
-import { AdminDashboard } from "@/modules/admin/components/AdminDashboard";
 import { RetryButton } from "@/modules/admin/components/RetryButton";
-import { getAdminCounts } from "@/modules/admin/document-types/queries";
-import type { AdminCounts } from "@/modules/admin/document-types/types";
+import { DocumentTypeList } from "@/modules/admin/document-types/components/DocumentTypeList";
+import { listDocumentTypes } from "@/modules/admin/document-types/queries";
+import type { DocumentType } from "@/modules/admin/document-types/types";
 
-export default async function AdminPage() {
+export default async function DocumentTypesPage() {
   const supabase = await createClient();
 
-  let counts: AdminCounts | null = null;
+  let documentTypes: DocumentType[] = [];
   let hasError = false;
 
   try {
-    counts = await getAdminCounts(supabase);
+    documentTypes = await listDocumentTypes(supabase);
   } catch {
     hasError = true;
   }
 
-  if (hasError || !counts) {
+  if (hasError) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-          No se pudieron cargar las estadísticas.
+          No se pudieron cargar los tipos de documento.
         </h2>
         <div className="mt-6">
           <RetryButton />
@@ -32,9 +32,9 @@ export default async function AdminPage() {
   return (
     <div className="px-4 py-6 md:px-8">
       <h1 className="mb-6 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-        Administración
+        Tipos de documento
       </h1>
-      <AdminDashboard counts={counts} />
+      <DocumentTypeList documentTypes={documentTypes} />
     </div>
   );
 }
