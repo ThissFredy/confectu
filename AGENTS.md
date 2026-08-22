@@ -58,6 +58,11 @@ with native browser APIs, Next.js, or React.
 - The invoice flow must allow users to quickly select or create a customer, add
   services or garments, enter quantities and prices, and review the total.
 - The interface must account for loading, empty, success, and error states.
+- Use `nextjs-toast-notify` for all toast notifications across the
+  application. Notifications must always appear in the top-right position
+  (`position: "top-right"`). Import `showToast` from `nextjs-toast-notify` in
+  client components and call `showToast.success`, `showToast.error`,
+  `showToast.warning`, or `showToast.info` as needed.
 
 ## Architecture
 
