@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NotFoundNotice } from "@/modules/admin/workshops/components/NotFoundNotice";
 import { WorkshopSettingsForm } from "@/modules/admin/workshops/components/WorkshopSettingsForm";
 import { CustomerList } from "@/modules/clients/components/CustomerList";
+import { AdminServiceReadOnlyList } from "@/modules/admin/workshops/components/AdminServiceReadOnlyList";
 import { updateWorkshopSettings } from "@/modules/admin/workshops/actions";
 import { toggleCustomerStatusAsAdmin } from "@/modules/admin/clients/actions";
 import {
@@ -10,6 +11,7 @@ import {
   getWorkshopLogoUrl,
 } from "@/modules/admin/workshops/queries";
 import { listCustomersByWorkshop } from "@/modules/admin/clients/queries";
+import { listServicesByWorkshop } from "@/modules/services/queries";
 
 interface EditWorkshopPageProps {
   params: Promise<{ id: string }>;
@@ -31,11 +33,12 @@ export default async function EditWorkshopPage({
     );
   }
 
-  const [logoUrl, customers] = await Promise.all([
+  const [logoUrl, customers, services] = await Promise.all([
     workshop.settings?.logoPath
       ? getWorkshopLogoUrl(supabase, workshop.settings.logoPath)
       : Promise.resolve(null),
     listCustomersByWorkshop(supabase, id),
+    listServicesByWorkshop(supabase, id),
   ]);
 
   return (
@@ -69,10 +72,10 @@ export default async function EditWorkshopPage({
 
         <div className="flex-1">
           <div className="mt-8 lg:mt-0">
-            <span className="inline-flex h-12 min-h-[44px] cursor-not-allowed items-center justify-center rounded-lg border border-zinc-300 px-6 text-base font-medium text-zinc-400 dark:border-zinc-700">
+            <h2 className="mb-4 text-lg font-medium text-zinc-900 dark:text-zinc-100">
               Servicios del taller
-              <span className="ml-2 text-xs">Próximamente</span>
-            </span>
+            </h2>
+            <AdminServiceReadOnlyList services={services} />
           </div>
         </div>
       </div>

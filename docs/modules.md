@@ -169,17 +169,16 @@ línea personalizada que no cree un registro en el catálogo.
   - Crear, editar, activar/desactivar y eliminar servicios del catálogo.
   - Definir nombre, descripción, categoría opcional y precio base en COP.
   - Seleccionar servicios del catálogo al armar una factura.
-- **Estado actual:** PENDIENTE DE IMPLEMENTACIÓN (spec en
-  `specs/modulo_4.3-4.7.4.md`).
-- **Observaciones:** La tabla `services`, índices y RLS están listos en la
-  migración inicial. La política `services_select` ya permite a `ADMIN` leer
-  vía `is_admin()` (migración `20260820`); no se requieren políticas de
-  mutación para `ADMIN` porque el MVP limita a `ADMIN` a solo lectura. El spec
-  define CRUD completo para `CLIENT` en `/services` (crear, editar,
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** CRUD completo para `CLIENT` en `/services` (crear, editar,
   desactivar/reactivar con doble confirmación y eliminación física con doble
-  confirmación), búsqueda por nombre, toggle de inactivos, bloqueo de
-  eliminación cuando el servicio está referenciado por `invoice_lines`, y la
-  consulta pública `listActiveServices` para el futuro flujo de factura.
+  confirmación). Búsqueda por nombre, filtro de inactivos, bloqueo de
+  eliminación cuando el servicio está referenciado por `invoice_lines`. La
+  consulta pública `listActiveServices` está disponible para el flujo de
+  factura. La vista de `ADMIN` se limita a solo lectura dentro de
+  `/admin/workshops/[id]`. No se requiere submódulo `modules/admin/services/`
+  independiente ni migración de RLS de mutación; la política `services_select`
+  existente ya permite la lectura.
 
 Entidad sugerida:
 
@@ -428,6 +427,7 @@ no pueden mutarlo.
   taller, integrada dentro del detalle del taller. `ADMIN` no crea, no
   edita, no desactiva y no elimina servicios; únicamente los consulta
   agrupados bajo el taller al que pertenecen.
+- **Estado actual:** SOLO LECTURA (absorbida por 4.3).
 - **Lo que se espera que pueda hacer el usuario:**
   - Ver los servicios de un taller dentro de `/admin/workshops/[id]`.
 - **Entidades:**
