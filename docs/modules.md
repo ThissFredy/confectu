@@ -140,10 +140,11 @@ registro de negocio. Cada cliente pertenece a un único `workshop_id`.
   - Asociar opcionalmente un tipo de documento del catálogo global.
   - Seleccionar un cliente existente o crear uno nuevo durante el flujo de
     factura.
-- **Estado actual:** NO IMPLEMENTADO.
-- **Observaciones:** La tabla `customers`, su índice y las políticas RLS están
-creadas en la migración inicial. Faltan componentes, Server Actions, consultas
-públicas (`getClientById`, búsquedas limitadas al taller) y pantallas.
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** CRUD completo para `CLIENT` en `/customers`, con búsqueda,
+  filtro de inactivos, doble confirmación en desactivar/reactivar y validación
+  de unicidad de documento por taller. La consulta pública
+  `searchCustomersForInvoice` está disponible para el flujo de factura.
 
 Entidades sugeridas:
 
@@ -372,36 +373,36 @@ no pueden mutarlo.
 #### 4.7.2 `modules/admin/clients/`
 
 - **Título:** Clientes gestionados por `ADMIN`.
-- **Descripción:** CRUD transversal de `customers`. Permite a `ADMIN`
-gestionar clientes de cualquier taller y, desde el detalle de un cliente,
-navegar a la gestión del taller, la configuración del taller y los servicios
-del mismo.
+- **Descripción:** Gestión transversal de `customers` para `ADMIN`. Permite
+  editar, desactivar y reactivar clientes de cualquier taller desde la vista
+  unificada de talleres. No incluye creación de clientes, que es responsabilidad
+  de `CLIENT`.
 - **Lo que se espera que pueda hacer el usuario:**
-  - Listar clientes de todos los talleres con búsqueda y filtro por taller.
-  - Crear, editar, desactivar y reactivar clientes seleccionando el taller al
-    que pertenecen.
-  - Desde el detalle de un cliente, acceder a `/admin/workshops/[workshopId]`
-    y a `/admin/services?workshopId=[workshopId]` del taller correspondiente.
+  - Listar clientes agrupados bajo cada taller en `/admin/workshops`.
+  - Editar, desactivar y reactivar clientes de cualquier taller.
+- **Estado actual:** IMPLEMENTADO.
 - **Entidades:**
   - `customers`: mismas columnas que en `modules/clients/`.
 - **Reglas:**
   - Las validaciones de campos son las mismas que en `modules/clients/`.
-  - `workshop_id` se valida contra un taller existente; no se confía en el
+  - `workshop_id` se obtiene del registro existente; no se confía en el
     formulario sin verificación.
   - La unicidad de documento por taller se mantiene igual.
-  - Las Server Actions validan rol `ADMIN` y pertenencia del `workshop_id`.
+  - Las Server Actions validan rol `ADMIN`.
 
 #### 4.7.3 `modules/admin/workshops/`
 
 - **Título:** Talleres y configuración gestionados por `ADMIN`.
 - **Descripción:** Permite a `ADMIN` gestionar la cuenta del taller
-(`workshops`) y su configuración (`workshop_settings`) de cualquier taller.
+  (`workshops`) y su configuración (`workshop_settings`) de cualquier taller,
+  incluyendo la vista unificada de talleres con sus clientes agrupados.
 - **Lo que se espera que pueda hacer el usuario:**
-  - Listar talleres y filtrar por estado.
+  - Listar talleres con sus clientes agrupados y filtrar por nombre comercial.
   - Activar o desactivar un taller.
   - Editar nombre comercial, datos de contacto, identificación fiscal,
     prefijo de factura, siguiente número de factura, instrucciones de pago y
     logo opcional.
+- **Estado actual:** IMPLEMENTADO.
 - **Entidades:**
   - `workshops`: `id`, `owner_id`, `is_active`, `created_at`, `updated_at`.
   - `workshop_settings`: `workshop_id`, `business_name`, `tax_id`, `phone`,
@@ -411,7 +412,7 @@ del mismo.
   - `next_invoice_number` no puede disminuir.
   - `invoice_prefix` mantiene `^[A-Z0-9]{1,3}$`.
   - El logo se gestiona en Supabase Storage con políticas que permitan a
-    `ADMIN` leer y escribir.
+    `ADMIN` y al owner del taller leer y escribir.
 
 #### 4.7.4 `modules/admin/services/`
 
