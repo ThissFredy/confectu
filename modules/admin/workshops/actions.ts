@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAuthState } from "@/modules/auth/queries";
+import { listCustomersByWorkshop } from "@/modules/admin/clients/queries";
+import { listServicesByWorkshop } from "@/modules/services/queries";
 import {
   validateWorkshopSettingsInput,
   type WorkshopSettingsInput,
 } from "./validations";
-import type { WorkshopActionResult } from "./types";
+import type { WorkshopActionResult, WorkshopDetailsResult } from "./types";
 
 const LOGO_MAX_SIZE = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -89,6 +91,37 @@ export async function toggleWorkshopStatus(
   revalidatePath(`/admin/workshops/${id}`);
   return { success: true };
 }
+
+export async function getWorkshopDetails(
+  formData: FormData,
+): Promise<WorkshopDetailsResult | { success: false; error: string }> {
+  const authError = await requireAdmin();
+  if (authError) {
+    return { success: false, error: authError.error ?? "No autorizado." };
+  }
+
+  const workshopId = String(formData.get("workshop_id") ?? "").trim();
+  if (!workshopId) {
+    return { success: false, error: "El taller es obligatorio." };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    const [customers, services] = await Promise.all([
+      listCustomersByWorkshop(supabase, workshopId),
+      listServicesByWorkshop(supabase, workshopId),
+    ]);
+
+    return { success: true, customers, services };
+  } catch {
+    return {
+      success: false,
+      error: "No se pudieron cargar los datos del taller.",
+    };
+  }
+}
+
 
 function parseWorkshopSettingsInput(formData: FormData): WorkshopSettingsInput {
   return {
