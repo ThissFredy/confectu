@@ -26,7 +26,8 @@ export interface WorkshopWithSettings {
   settings: WorkshopSettings | null;
 }
 
-export interface WorkshopWithDetails extends WorkshopWithSettings {
+export interface WorkshopDetailsResult {
+  success: true;
   customers: import("@/modules/clients/types").Customer[];
   services: import("@/modules/services/types").Service[];
 }
