@@ -169,10 +169,17 @@ línea personalizada que no cree un registro en el catálogo.
   - Crear, editar, activar/desactivar y eliminar servicios del catálogo.
   - Definir nombre, descripción, categoría opcional y precio base en COP.
   - Seleccionar servicios del catálogo al armar una factura.
-- **Estado actual:** NO IMPLEMENTADO.
+- **Estado actual:** PENDIENTE DE IMPLEMENTACIÓN (spec en
+  `specs/modulo_4.3-4.7.4.md`).
 - **Observaciones:** La tabla `services`, índices y RLS están listos en la
-migración inicial. Falta todo el código de aplicación (componentes, Server
-Actions, consultas y rutas).
+  migración inicial. La política `services_select` ya permite a `ADMIN` leer
+  vía `is_admin()` (migración `20260820`); no se requieren políticas de
+  mutación para `ADMIN` porque el MVP limita a `ADMIN` a solo lectura. El spec
+  define CRUD completo para `CLIENT` en `/services` (crear, editar,
+  desactivar/reactivar con doble confirmación y eliminación física con doble
+  confirmación), búsqueda por nombre, toggle de inactivos, bloqueo de
+  eliminación cuando el servicio está referenciado por `invoice_lines`, y la
+  consulta pública `listActiveServices` para el futuro flujo de factura.
 
 Entidad sugerida:
 
@@ -417,20 +424,24 @@ no pueden mutarlo.
 #### 4.7.4 `modules/admin/services/`
 
 - **Título:** Servicios gestionados por `ADMIN`.
-- **Descripción:** CRUD transversal de `services` de cualquier taller.
+- **Descripción:** Vista de **solo lectura** de `services` de cualquier
+  taller, integrada dentro del detalle del taller. `ADMIN` no crea, no
+  edita, no desactiva y no elimina servicios; únicamente los consulta
+  agrupados bajo el taller al que pertenecen.
 - **Lo que se espera que pueda hacer el usuario:**
-  - Listar servicios de todos los talleres con filtro por taller.
-  - Crear, editar, activar o desactivar y eliminar servicios.
-  - Definir nombre, descripción, categoría opcional y precio base en COP.
+  - Ver los servicios de un taller dentro de `/admin/workshops/[id]`.
 - **Entidades:**
   - `services`: `id`, `workshop_id`, `name`, `description`, `category`,
     `default_price_cop`, `is_active`, `created_at`, `updated_at`.
 - **Reglas:**
-  - Requiere migración de RLS para permitir a `ADMIN` leer y mutar
-    `services`.
-  - `default_price_cop` debe ser mayor o igual a `0`.
-  - `workshop_id` se valida contra un taller existente.
-  - Las Server Actions validan rol `ADMIN`.
+  - No se requiere migración de RLS de mutación: la política
+    `services_select` existente ya permite a `ADMIN` leer vía `is_admin()`.
+  - No se requiere submódulo `modules/admin/services/` independiente ni rutas
+    `/admin/services/*`; la vista de solo lectura se integra en
+    `/admin/workshops/[id]` reutilizando `ServiceReadOnlyList` desde
+    `modules/services/components/`.
+  - El CRUD completo de servicios es responsabilidad exclusiva de `CLIENT`
+    en `/services/*` (módulo 4.3).
 
 ## 5. Rutas de aplicación
 
