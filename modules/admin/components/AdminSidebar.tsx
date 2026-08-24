@@ -14,7 +14,6 @@ const menuItems: MenuItem[] = [
   { label: "Inicio", href: "/admin" },
   { label: "Tipos de documento", href: "/admin/document-types" },
   { label: "Talleres", href: "/admin/workshops" },
-  { label: "Servicios", href: "/admin/services", comingSoon: true },
 ];
 
 export function AdminSidebar() {
