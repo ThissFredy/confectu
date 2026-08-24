@@ -3,13 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AdminCustomerStatusToggle } from "@/modules/admin/clients/components/AdminCustomerStatusToggle";
+import { ServiceReadOnlyList } from "@/modules/services/components/ServiceReadOnlyList";
 import { WorkshopStatusToggle } from "./WorkshopStatusToggle";
 import { toggleCustomerStatusAsAdmin } from "@/modules/admin/clients/actions";
 import { toggleWorkshopStatus } from "../actions";
-import type { WorkshopWithCustomers } from "../types";
+import type { WorkshopWithDetails } from "../types";
 
 interface WorkshopListProps {
-  workshops: WorkshopWithCustomers[];
+  workshops: WorkshopWithDetails[];
 }
 
 export function WorkshopList({ workshops }: WorkshopListProps) {
@@ -79,7 +80,7 @@ export function WorkshopList({ workshops }: WorkshopListProps) {
                       }
                       className="flex items-center gap-2 text-left"
                       aria-expanded={isExpanded}
-                      aria-controls={`workshop-customers-${item.workshop.id}`}
+                      aria-controls={`workshop-details-${item.workshop.id}`}
                     >
                       <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
                         {businessName}
@@ -114,72 +115,89 @@ export function WorkshopList({ workshops }: WorkshopListProps) {
                 </div>
 
                 <div
-                  id={`workshop-customers-${item.workshop.id}`}
+                  id={`workshop-details-${item.workshop.id}`}
                   className={`border-t border-zinc-200 dark:border-zinc-800 ${isExpanded ? "block" : "hidden md:block"}`}
                 >
-                  {item.customers.length === 0 ? (
-                    <p className="px-4 py-4 text-sm text-zinc-600 dark:text-zinc-400">
-                      Sin clientes.
-                    </p>
-                  ) : (
-                    <ul className="flex flex-col gap-2 px-4 py-4">
-                      {item.customers.map((customer) => {
-                        const document = [
-                          customer.documentTypeName,
-                          customer.documentNumber,
-                        ]
-                          .filter(Boolean)
-                          .join(": ");
+                  <div className="grid gap-6 p-4 md:grid-cols-2">
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        Clientes
+                      </h3>
+                      {item.customers.length === 0 ? (
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          Sin clientes.
+                        </p>
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {item.customers.map((customer) => {
+                            const document = [
+                              customer.documentTypeName,
+                              customer.documentNumber,
+                            ]
+                              .filter(Boolean)
+                              .join(": ");
 
-                        return (
-                          <li
-                            key={customer.id}
-                            className="flex flex-col gap-3 rounded-lg border border-zinc-100 p-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between"
-                          >
-                            <div className="flex flex-col gap-1">
-                              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                                {customer.name}
-                              </p>
-                              {document && (
-                                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                                  {document}
-                                </p>
-                              )}
-                              {(customer.phone || customer.email) && (
-                                <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                                  {[customer.phone, customer.email]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </p>
-                              )}
-                              <span
-                                className={`inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  customer.isActive
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-                                }`}
+                            return (
+                              <li
+                                key={customer.id}
+                                className="flex flex-col gap-3 rounded-lg border border-zinc-100 p-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between"
                               >
-                                {customer.isActive ? "Activo" : "Inactivo"}
-                              </span>
-                            </div>
+                                <div className="flex flex-col gap-1">
+                                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                                    {customer.name}
+                                  </p>
+                                  {document && (
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                      {document}
+                                    </p>
+                                  )}
+                                  {(customer.phone || customer.email) && (
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                      {[customer.phone, customer.email]
+                                        .filter(Boolean)
+                                        .join(" · ")}
+                                    </p>
+                                  )}
+                                  <span
+                                    className={`inline-flex w-fit rounded-full px-2 py-0.5 text-xs font-medium ${
+                                      customer.isActive
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                        : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                                    }`}
+                                  >
+                                    {customer.isActive ? "Activo" : "Inactivo"}
+                                  </span>
+                                </div>
 
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/admin/workshops/${item.workshop.id}/customers/${customer.id}`}
-                                className="inline-flex h-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                              >
-                                Editar
-                              </Link>
-                              <AdminCustomerStatusToggle
-                                customer={customer}
-                                action={toggleCustomerStatusAsAdmin}
-                              />
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/admin/workshops/${item.workshop.id}/customers/${customer.id}`}
+                                    className="inline-flex h-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                                  >
+                                    Editar
+                                  </Link>
+                                  <AdminCustomerStatusToggle
+                                    customer={customer}
+                                    action={toggleCustomerStatusAsAdmin}
+                                  />
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        Servicios
+                      </h3>
+                      <ServiceReadOnlyList
+                        services={item.services}
+                        emptyMessage="Sin servicios."
+                      />
+                    </div>
+                  </div>
                 </div>
               </li>
             );

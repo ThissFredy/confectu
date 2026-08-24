@@ -1,17 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { RetryButton } from "@/modules/admin/components/RetryButton";
 import { WorkshopList } from "@/modules/admin/workshops/components/WorkshopList";
-import { listWorkshopsWithCustomers } from "@/modules/admin/workshops/queries";
-import type { WorkshopWithCustomers } from "@/modules/admin/workshops/types";
+import { listWorkshopsWithDetails } from "@/modules/admin/workshops/queries";
+import type { WorkshopWithDetails } from "@/modules/admin/workshops/types";
 
 export default async function WorkshopsPage() {
   const supabase = await createClient();
 
-  let workshops: WorkshopWithCustomers[] = [];
+  let workshops: WorkshopWithDetails[] = [];
   let hasError = false;
 
   try {
-    workshops = await listWorkshopsWithCustomers(supabase);
+    workshops = await listWorkshopsWithDetails(supabase);
   } catch {
     hasError = true;
   }

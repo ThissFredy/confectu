@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Service } from "./types";
 
-interface DbService {
+export interface DbService {
   id: string;
   workshop_id: string;
   name: string;
@@ -13,7 +13,7 @@ interface DbService {
   updated_at: string;
 }
 
-function mapService(row: DbService): Service {
+export function mapService(row: DbService): Service {
   return {
     id: row.id,
     workshopId: row.workshop_id,

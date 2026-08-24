@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Customer } from "@/modules/clients/types";
+import type { Service } from "@/modules/services/types";
+import { mapService, type DbService } from "@/modules/services/queries";
 import type {
   Workshop,
   WorkshopSettings,
-  WorkshopWithCustomers,
+  WorkshopWithDetails,
   WorkshopWithSettings,
 } from "./types";
 
@@ -153,9 +155,9 @@ export async function getWorkshopLogoUrl(
   return data.signedUrl;
 }
 
-export async function listWorkshopsWithCustomers(
+export async function listWorkshopsWithDetails(
   supabase: SupabaseClient,
-): Promise<WorkshopWithCustomers[]> {
+): Promise<WorkshopWithDetails[]> {
   const { data: workshopsData, error: workshopsError } = await supabase
     .from("workshops")
     .select("id, owner_id, is_active, created_at, updated_at")
@@ -210,10 +212,31 @@ export async function listWorkshopsWithCustomers(
     customersByWorkshop.set(row.workshop_id, list);
   }
 
+  const { data: servicesData, error: servicesError } = await supabase
+    .from("services")
+    .select(
+      "id, workshop_id, name, description, category, default_price_cop, is_active, created_at, updated_at",
+    )
+    .in("workshop_id", workshopIds)
+    .order("name", { ascending: true });
+
+  if (servicesError) {
+    throw new Error(servicesError.message);
+  }
+
+  const servicesByWorkshop = new Map<string, Service[]>();
+
+  for (const row of (servicesData ?? []) as DbService[]) {
+    const list = servicesByWorkshop.get(row.workshop_id) ?? [];
+    list.push(mapService(row));
+    servicesByWorkshop.set(row.workshop_id, list);
+  }
+
   const items = workshops.map((workshop) => ({
     workshop: mapWorkshop(workshop),
     settings: settingsByWorkshop.get(workshop.id) ?? null,
     customers: customersByWorkshop.get(workshop.id) ?? [],
+    services: servicesByWorkshop.get(workshop.id) ?? [],
   }));
 
   items.sort((a, b) => {
