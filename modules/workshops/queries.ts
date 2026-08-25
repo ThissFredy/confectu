@@ -55,87 +55,95 @@ function mapSettings(row: DbWorkshopSettings): WorkshopSettings {
   };
 }
 
-export async function listWorkshopsWithSettings(
+export async function getCurrentWorkshop(
   supabase: SupabaseClient,
-): Promise<WorkshopWithSettings[]> {
-  const { data: workshopsData, error: workshopsError } = await supabase
+): Promise<Workshop | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
     .from("workshops")
     .select("id, owner_id, is_active, created_at, updated_at")
-    .order("created_at", { ascending: false });
+    .eq("owner_id", user.id)
+    .single();
 
-  if (workshopsError) {
-    throw new Error(workshopsError.message);
+  if (error || !data) {
+    return null;
   }
 
-  const workshops = (workshopsData ?? []) as DbWorkshop[];
-
-  if (workshops.length === 0) {
-    return [];
-  }
-
-  const workshopIds = workshops.map((workshop) => workshop.id);
-
-  const { data: settingsData, error: settingsError } = await supabase
-    .from("workshop_settings")
-    .select(
-      "workshop_id, business_name, tax_id, phone, email, address, invoice_prefix, next_invoice_number, payment_instructions, logo_path, created_at, updated_at",
-    )
-    .in("workshop_id", workshopIds);
-
-  if (settingsError) {
-    throw new Error(settingsError.message);
-  }
-
-  const settingsByWorkshop = new Map<string, WorkshopSettings>();
-
-  for (const row of (settingsData ?? []) as DbWorkshopSettings[]) {
-    settingsByWorkshop.set(row.workshop_id, mapSettings(row));
-  }
-
-  const items = workshops.map((workshop) => ({
-    workshop: mapWorkshop(workshop),
-    settings: settingsByWorkshop.get(workshop.id) ?? null,
-  }));
-
-  items.sort((a, b) => {
-    const nameA = a.settings?.businessName ?? "";
-    const nameB = b.settings?.businessName ?? "";
-    return nameA.localeCompare(nameB);
-  });
-
-  return items;
+  return mapWorkshop(data as DbWorkshop);
 }
 
-export async function getWorkshopById(
+export async function getCurrentWorkshopSettings(
   supabase: SupabaseClient,
-  id: string,
-): Promise<WorkshopWithSettings | null> {
-  const { data: workshopData, error: workshopError } = await supabase
-    .from("workshops")
-    .select("id, owner_id, is_active, created_at, updated_at")
-    .eq("id", id)
-    .single();
+): Promise<WorkshopSettings | null> {
+  const workshop = await getCurrentWorkshop(supabase);
 
-  if (workshopError || !workshopData) {
+  if (!workshop) {
     return null;
   }
 
-  const { data: settingsData, error: settingsError } = await supabase
+  const { data, error } = await supabase
     .from("workshop_settings")
     .select(
       "workshop_id, business_name, tax_id, phone, email, address, invoice_prefix, next_invoice_number, payment_instructions, logo_path, created_at, updated_at",
     )
-    .eq("workshop_id", id)
+    .eq("workshop_id", workshop.id)
     .single();
 
-  if (settingsError) {
+  if (error || !data) {
     return null;
+  }
+
+  return mapSettings(data as DbWorkshopSettings);
+}
+
+export async function getCurrentWorkshopWithSettings(
+  supabase: SupabaseClient,
+): Promise<WorkshopWithSettings | null> {
+  const workshop = await getCurrentWorkshop(supabase);
+
+  if (!workshop) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("workshop_settings")
+    .select(
+      "workshop_id, business_name, tax_id, phone, email, address, invoice_prefix, next_invoice_number, payment_instructions, logo_path, created_at, updated_at",
+    )
+    .eq("workshop_id", workshop.id)
+    .single();
+
+  if (error) {
+    return {
+      workshop,
+      settings: null,
+    };
   }
 
   return {
-    workshop: mapWorkshop(workshopData as DbWorkshop),
-    settings: settingsData ? mapSettings(settingsData as DbWorkshopSettings) : null,
+    workshop,
+    settings: data ? mapSettings(data as DbWorkshopSettings) : null,
   };
 }
 
+export async function getWorkshopLogoUrl(
+  supabase: SupabaseClient,
+  logoPath: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from("workshop-logos")
+    .createSignedUrl(logoPath, 60);
 
+  if (error || !data?.signedUrl) {
+    return null;
+  }
+
+  return data.signedUrl;
+}

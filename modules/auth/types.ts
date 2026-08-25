@@ -39,15 +39,4 @@ export interface AuthActionResult {
   fieldErrors?: Record<string, string>;
 }
 
-export interface WorkshopSettings {
-  workshopId: string;
-  businessName: string;
-  taxId: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  invoicePrefix: string;
-  nextInvoiceNumber: number;
-  paymentInstructions: string | null;
-  logoPath: string | null;
-}
+export type { WorkshopSettings } from "@/modules/workshops/types";
