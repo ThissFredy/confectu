@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { NotFoundNotice } from "@/modules/admin/workshops/components/NotFoundNotice";
-import { WorkshopSettingsForm } from "@/modules/admin/workshops/components/WorkshopSettingsForm";
+import { WorkshopSettingsForm } from "@/modules/workshops/components/WorkshopSettingsForm";
 import { CustomerList } from "@/modules/clients/components/CustomerList";
 import { AdminServiceReadOnlyList } from "@/modules/admin/workshops/components/AdminServiceReadOnlyList";
 import { updateWorkshopSettings } from "@/modules/admin/workshops/actions";
 import { toggleCustomerStatusAsAdmin } from "@/modules/admin/clients/actions";
-import {
-  getWorkshopById,
-  getWorkshopLogoUrl,
-} from "@/modules/admin/workshops/queries";
+import { getWorkshopById } from "@/modules/admin/workshops/queries";
+import { getWorkshopLogoUrl } from "@/modules/workshops/queries";
 import { listCustomersByWorkshop } from "@/modules/admin/clients/queries";
 import { listServicesByWorkshop } from "@/modules/services/queries";
 
@@ -66,6 +64,7 @@ export default async function EditWorkshopPage({
               logoUrl={logoUrl}
               currentLogoPath={workshop.settings?.logoPath ?? null}
               action={updateWorkshopSettings}
+              showNextInvoiceNumber={true}
             />
           </div>
         </div>

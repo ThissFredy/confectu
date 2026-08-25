@@ -200,10 +200,17 @@ prefijo y consecutivo de facturas, instrucciones de pago y logo opcional.
   - Definir el prefijo y el siguiente número de factura.
   - Establecer texto de condiciones o instrucciones de pago.
   - Subir y reemplazar un logo opcional en Supabase Storage.
-- **Estado actual:** NO IMPLEMENTADO.
-- **Observaciones:** La tabla `workshop_settings` y sus restricciones están
-listas. Falta la interfaz de configuración, la gestión del logo en Storage y
-las validaciones de acceso en Server Actions.
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** La configuración del taller se edita desde `/settings`
+para el rol `CLIENT`, reutilizando el formulario compartido
+`WorkshopSettingsForm` ubicado en `modules/workshops/components/`. El módulo
+expone las consultas públicas `getCurrentWorkshopSettings` y `getWorkshopLogoUrl`
+para que otros módulos (facturas, dashboard, PDF) obtengan la configuración del
+taller sin acceder a archivos internos de `modules/auth/` ni `modules/admin/`.
+La vista `ADMIN` en `/admin/workshops/[id]` importa el mismo formulario con
+`showNextInvoiceNumber={true}` para seguir editando el siguiente número de
+factura. La gestión del logo respeta el bucket privado `workshop-logos` y las
+políticas de Storage existentes.
 
 Entidades sugeridas:
 

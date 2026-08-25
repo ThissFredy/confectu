@@ -111,7 +111,7 @@ export async function getWorkshopSettings(
   const { data, error } = await supabase
     .from("workshop_settings")
     .select(
-      "workshop_id, business_name, tax_id, phone, email, address, invoice_prefix, next_invoice_number, payment_instructions, logo_path",
+      "workshop_id, business_name, tax_id, phone, email, address, invoice_prefix, next_invoice_number, payment_instructions, logo_path, created_at, updated_at",
     )
     .eq("workshop_id", workshop.id)
     .single();
@@ -131,5 +131,7 @@ export async function getWorkshopSettings(
     nextInvoiceNumber: Number(data.next_invoice_number),
     paymentInstructions: data.payment_instructions,
     logoPath: data.logo_path,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
   };
 }

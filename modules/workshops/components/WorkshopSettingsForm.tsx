@@ -11,6 +11,7 @@ interface WorkshopSettingsFormProps {
   logoUrl: string | null;
   currentLogoPath: string | null;
   action: (formData: FormData) => Promise<WorkshopActionResult>;
+  showNextInvoiceNumber?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,6 +38,7 @@ export function WorkshopSettingsForm({
   logoUrl,
   currentLogoPath,
   action,
+  showNextInvoiceNumber = false,
 }: WorkshopSettingsFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,7 +112,6 @@ export function WorkshopSettingsForm({
     const invoicePrefix = String(formData.get("invoice_prefix") ?? "")
       .trim()
       .toUpperCase();
-    const nextInvoiceNumber = Number(formData.get("next_invoice_number") ?? "");
     const paymentInstructions = String(
       formData.get("payment_instructions") ?? "",
     ).trim();
@@ -153,14 +154,17 @@ export function WorkshopSettingsForm({
         "El prefijo debe tener 1 a 3 letras o números en mayúscula.";
     }
 
-    if (!Number.isFinite(nextInvoiceNumber) || nextInvoiceNumber < 1) {
-      fieldErrors.next_invoice_number =
-        "El número de factura debe ser mayor o igual a 1.";
-    }
-
     if (paymentInstructions.length > 1000) {
       fieldErrors.payment_instructions =
         "Las instrucciones de pago deben tener máximo 1000 caracteres.";
+    }
+
+    if (showNextInvoiceNumber) {
+      const nextInvoiceNumber = Number(formData.get("next_invoice_number") ?? "");
+      if (!Number.isFinite(nextInvoiceNumber) || nextInvoiceNumber < 1) {
+        fieldErrors.next_invoice_number =
+          "El número de factura debe ser mayor o igual a 1.";
+      }
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -352,29 +356,31 @@ export function WorkshopSettingsForm({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="next_invoice_number"
-          className="text-sm font-medium text-zinc-900 dark:text-zinc-100"
-        >
-          Siguiente número de factura
-        </label>
-        <input
-          id="next_invoice_number"
-          name="next_invoice_number"
-          type="number"
-          required
-          min={1}
-          defaultValue={workshop.settings?.nextInvoiceNumber}
-          aria-invalid={!!result?.fieldErrors?.next_invoice_number}
-          className="h-12 w-full rounded-lg border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100 dark:focus:ring-zinc-100/10"
-        />
-        {result?.fieldErrors?.next_invoice_number ? (
-          <p className="text-sm text-red-600 dark:text-red-400">
-            {result.fieldErrors.next_invoice_number}
-          </p>
-        ) : null}
-      </div>
+      {showNextInvoiceNumber ? (
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="next_invoice_number"
+            className="text-sm font-medium text-zinc-900 dark:text-zinc-100"
+          >
+            Siguiente número de factura
+          </label>
+          <input
+            id="next_invoice_number"
+            name="next_invoice_number"
+            type="number"
+            required
+            min={1}
+            defaultValue={workshop.settings?.nextInvoiceNumber}
+            aria-invalid={!!result?.fieldErrors?.next_invoice_number}
+            className="h-12 w-full rounded-lg border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100 dark:focus:ring-zinc-100/10"
+          />
+          {result?.fieldErrors?.next_invoice_number ? (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {result.fieldErrors.next_invoice_number}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2">
         <label
