@@ -130,3 +130,11 @@ export interface InvoiceStats {
   countByStatus: Record<InvoiceStatus, number>;
   recentInvoices: Invoice[];
 }
+
+export interface InvoicePeriodStats {
+  issuedCount: number;
+  totalInvoicedCop: number;
+  voidedCount: number;
+  garmentsTotal: number;
+  servicesTotal: number;
+}

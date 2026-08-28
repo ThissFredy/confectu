@@ -7,6 +7,7 @@ import type {
   InvoiceLine,
   InvoiceListItem,
   InvoicePdfData,
+  InvoicePeriodStats,
   InvoiceStats,
   InvoiceStatus,
   InvoiceWithRelations,
@@ -370,4 +371,131 @@ export async function getInvoiceStats(
     countByStatus,
     recentInvoices: [],
   };
+}
+
+function toStartOfDayIso(date: Date): string {
+  const clone = new Date(date);
+  clone.setHours(0, 0, 0, 0);
+  return clone.toISOString();
+}
+
+function toEndOfDayIso(date: Date): string {
+  const clone = new Date(date);
+  clone.setHours(23, 59, 59, 999);
+  return clone.toISOString();
+}
+
+export async function getInvoiceStatsForPeriod(
+  supabase: SupabaseClient,
+  startDate: Date | null,
+  endDate: Date | null,
+): Promise<InvoicePeriodStats> {
+  let issuedQuery = supabase
+    .from("invoices")
+    .select("id, total_cop")
+    .eq("status", "issued");
+
+  if (startDate) {
+    issuedQuery = issuedQuery.gte("issued_at", toStartOfDayIso(startDate));
+  }
+  if (endDate) {
+    issuedQuery = issuedQuery.lte("issued_at", toEndOfDayIso(endDate));
+  }
+
+  let voidQuery = supabase.from("invoices").select("id").eq("status", "void");
+
+  if (startDate) {
+    voidQuery = voidQuery.gte("voided_at", toStartOfDayIso(startDate));
+  }
+  if (endDate) {
+    voidQuery = voidQuery.lte("voided_at", toEndOfDayIso(endDate));
+  }
+
+  const [{ data: issuedData, error: issuedError }, { data: voidData, error: voidError }] =
+    await Promise.all([issuedQuery, voidQuery]);
+
+  if (issuedError) {
+    throw new Error(issuedError.message);
+  }
+  if (voidError) {
+    throw new Error(voidError.message);
+  }
+
+  const issuedInvoices = issuedData ?? [];
+  const issuedCount = issuedInvoices.length;
+  const totalInvoicedCop = issuedInvoices.reduce(
+    (sum, row) => sum + Number(row.total_cop),
+    0,
+  );
+  const voidedCount = (voidData ?? []).length;
+
+  let garmentsTotal = 0;
+  let servicesTotal = 0;
+
+  if (issuedCount > 0) {
+    const issuedIds = issuedInvoices.map((row) => row.id);
+
+    const { data: linesData, error: linesError } = await supabase
+      .from("invoice_lines")
+      .select("quantity")
+      .in("invoice_id", issuedIds);
+
+    if (linesError) {
+      throw new Error(linesError.message);
+    }
+
+    const lines = linesData ?? [];
+    servicesTotal = lines.length;
+    garmentsTotal = lines.reduce(
+      (sum, row) => sum + Number(row.quantity),
+      0,
+    );
+  }
+
+  return {
+    issuedCount,
+    totalInvoicedCop,
+    voidedCount,
+    garmentsTotal,
+    servicesTotal,
+  };
+}
+
+export async function getDraftInvoiceCount(supabase: SupabaseClient): Promise<number> {
+  const { count, error } = await supabase
+    .from("invoices")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "draft");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
+export async function getRecentInvoices(
+  supabase: SupabaseClient,
+  limit = 5,
+): Promise<InvoiceListItem[]> {
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(
+      "id, workshop_id, customer_id, number, status, currency, issued_at, subtotal_cop, total_adjustments_cop, total_cop, payment_method, payment_instructions, notes, voided_at, created_at, updated_at, customers(name)",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => {
+    const customerName =
+      (row.customers as { name: string }[] | null)?.[0]?.name ?? "Sin nombre";
+    return {
+      ...mapInvoice(row as unknown as DbInvoice),
+      customerName,
+    };
+  });
 }
