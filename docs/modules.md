@@ -252,20 +252,22 @@ PDF.
   - Aplicar impuestos, retenciones, descuentos y cobros adicionales.
   - Revisar subtotal, ajustes y total calculados por el servidor.
   - Emitir, consultar, anular y descargar comprobantes en PDF.
-- **Estado actual:** NO IMPLEMENTADO.
-- **Observaciones:** Las tablas `invoices`, `invoice_lines` e
-`invoice_adjustments`, junto con sus restricciones, índices y políticas RLS,
-están definidas en la migración inicial. Falta toda la lógica de aplicación,
-incluyendo el recálculo server-side, la reserva segura de consecutivos y la
-generación del PDF.
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** CRUD completo de facturas para `CLIENT` en `/invoices`, con
+creación de borradores, edición, emisión con numeración atómica, anulación,
+eliminación de borradores y descarga de PDF en todos los estados. El módulo
+expone las consultas públicas `listInvoices`, `getInvoiceById`,
+`getInvoiceForPdf` y `getInvoiceStats` para el dashboard. Se eliminaron los
+snapshots de cliente de la tabla `invoices`; los datos del cliente se consultan
+dinámicamente por `customer_id`. El PDF se genera en el momento con `pdfkit` y
+no se persiste.
 
 Entidades sugeridas:
 
 - `invoices`: `id`, `workshop_id`, `customer_id`, `number`, `status`,
-  `currency`, `issued_at`, `customer_name_snapshot`,
-  `customer_document_snapshot`, `customer_contact_snapshot`, `subtotal_cop`,
-  `total_adjustments_cop`, `total_cop`, `payment_method`,
-  `payment_instructions`, `notes`, `created_at`, `updated_at`, `voided_at`.
+  `currency`, `issued_at`, `subtotal_cop`, `total_adjustments_cop`, `total_cop`,
+  `payment_method`, `payment_instructions`, `notes`, `created_at`, `updated_at`,
+  `voided_at`.
 - `invoice_lines`: `id`, `invoice_id`, `service_id` opcional,
   `description_snapshot`, `quantity`, `unit_price_cop`, `line_total_cop`,
   `created_at`.
@@ -491,8 +493,9 @@ estructura existente sin crear una carpeta `src/` alternativa.
 - `modules/admin/` valida rol `ADMIN` en todas sus Server Actions y no
   sustituye a las RLS; las políticas deben permitir las operaciones admin
   correspondientes.
-- Las facturas guardan snapshots de cliente y líneas cuando sea necesario para
-  que el documento histórico no cambie al editar el catálogo.
+- Las facturas guardan snapshots de líneas para que el documento histórico no
+  cambie al editar el catálogo; los datos del cliente se consultan dinámicamente
+  por `customer_id`.
 
 ## 7. Seguridad y base de datos
 
