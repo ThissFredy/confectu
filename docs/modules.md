@@ -306,9 +306,14 @@ acceder directamente a tablas internas de otro módulo.
   - Consultar las facturas recientes.
   - Identificar clientes y servicios más utilizados, si las consultas son
     necesarias.
-- **Estado actual:** NO IMPLEMENTADO.
-- **Observaciones:** Depende de la implementación previa de `modules/invoices/`.
-No requiere tablas propias en el MVP.
+- **Estado actual:** IMPLEMENTADO.
+- **Observaciones:** Dashboard de solo lectura en `/dashboard` para el rol `CLIENT`.
+Muestra indicadores con dos categorías temporales ("Este mes" / "General") y
+valores actuales (borradores y clientes activos). Incluye filtro opcional por
+rango de fechas personalizado y lista de facturas recientes. Reutiliza las
+consultas públicas `getInvoiceStatsForPeriod`, `getDraftInvoiceCount` y
+`getRecentInvoices` de `modules/invoices/queries.ts`, y `getActiveCustomerCount`
+de `modules/clients/queries.ts`. No requiere tablas propias ni Server Actions.
 
 ### 4.7 `modules/admin/`
 
