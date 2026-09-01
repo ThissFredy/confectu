@@ -45,6 +45,53 @@ function statusLabel(status: InvoicePdfData["invoice"]["status"]): string {
   }
 }
 
+function statusColor(status: InvoicePdfData["invoice"]["status"]): string {
+  switch (status) {
+    case "issued":
+      return "#15803d";
+    case "void":
+      return "#dc2626";
+    default:
+      return "#71717a";
+  }
+}
+
+function drawField(
+  doc: PDFKit.PDFDocument,
+  label: string,
+  value: string,
+  valueColor: string,
+  x: number,
+  y: number,
+  width: number,
+): number {
+  doc.font("Helvetica").fontSize(9);
+  doc.fillColor("#71717a");
+  doc.text(label, x, y, { width, align: "left" });
+
+  doc.font("Helvetica-Bold").fontSize(11);
+  doc.fillColor(valueColor);
+  doc.text(value, x, y + 12, { width, align: "left" });
+
+  return y + 29;
+}
+
+function drawSectionHeading(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+): number {
+  doc.rect(x, y, 3, 9).fill("#18181b");
+
+  doc.font("Helvetica-Bold").fontSize(10);
+  doc.fillColor("#18181b");
+  doc.text(text, x + 10, y, { width: width - 10, align: "left" });
+
+  return y + 16;
+}
+
 function adjustmentLabel(adjustment: InvoiceAdjustment): string {
   const categoryLabels: Record<InvoiceAdjustment["category"], string> = {
     tax: "Impuesto",
@@ -101,7 +148,8 @@ function drawTable(
       const x =
         index === 0
           ? startX
-          : startX + columns.slice(0, index).reduce((sum, c) => sum + c.width, 0);
+          : startX +
+            columns.slice(0, index).reduce((sum, c) => sum + c.width, 0);
 
       doc.fillColor("#18181b");
       doc.text(row[index] ?? "", x + padding, currentY + padding, {
@@ -140,6 +188,8 @@ async function fetchLogoBuffer(logoUrl: string): Promise<Buffer | null> {
 }
 
 export async function buildInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
+  const logoBuffer = data.logoUrl ? await fetchLogoBuffer(data.logoUrl) : null;
+
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({ margin: 50, size: "A4" });
@@ -148,55 +198,91 @@ export async function buildInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const pageWidth =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
     const leftMargin = doc.page.margins.left;
-    let cursorY = doc.page.margins.top;
 
-    // Header: logo + workshop info
-    if (data.logoUrl) {
-      fetchLogoBuffer(data.logoUrl)
-        .then((logoBuffer) => {
-          if (logoBuffer) {
-            try {
-              doc.image(logoBuffer, leftMargin, cursorY, {
-                fit: [80, 60],
-              });
-              cursorY += 70;
-            } catch {
-              // Ignore logo errors and continue without it.
-            }
-          }
-          renderContent(doc, data, cursorY, pageWidth, leftMargin);
-          doc.end();
-        })
-        .catch(() => {
-          renderContent(doc, data, cursorY, pageWidth, leftMargin);
-          doc.end();
-        });
-    } else {
-      renderContent(doc, data, cursorY, pageWidth, leftMargin);
-      doc.end();
-    }
+    renderContent(doc, data, logoBuffer, pageWidth, leftMargin);
+    doc.end();
   });
 }
 
 function renderContent(
   doc: PDFKit.PDFDocument,
   data: InvoicePdfData,
-  startY: number,
+  logoBuffer: Buffer | null,
   pageWidth: number,
   leftMargin: number,
 ): void {
-  let cursorY = startY;
+  let cursorY = doc.page.margins.top;
 
-  doc.font("Helvetica-Bold").fontSize(18);
+  // Header: big title on the left, logo on the right, vertically centered.
+  const title = "FACTURA DE COBRO";
+  const titleFontSize = 26;
+  const logoWidth = 130;
+  const logoHeight = 90;
+  const titleWidth = pageWidth - logoWidth - 20;
+  const logoX = leftMargin + pageWidth - logoWidth;
+
+  doc.font("Helvetica-Bold").fontSize(titleFontSize);
+  doc.fillColor("#18181b");
+
+  const titleHeight = doc.heightOfString(title, { width: titleWidth });
+
+  let headerHeight = titleHeight;
+  let titleY = cursorY;
+
+  if (logoBuffer) {
+    headerHeight = Math.max(titleHeight, logoHeight);
+    const headerCenterY = cursorY + headerHeight / 2;
+    titleY = headerCenterY + titleFontSize * 0.25;
+
+    try {
+      doc.image(logoBuffer, logoX, headerCenterY - logoHeight / 2, {
+        fit: [logoWidth, logoHeight],
+        align: "right",
+        valign: "center",
+      });
+    } catch {
+      // Ignore logo errors and continue without it.
+    }
+  }
+
+  doc.text(title, leftMargin, titleY, {
+    width: titleWidth,
+    align: "left",
+  });
+
+  cursorY += headerHeight;
+
+  // Divider under header
+  doc
+    .moveTo(leftMargin, cursorY)
+    .lineTo(leftMargin + pageWidth, cursorY)
+    .stroke("#e4e4e7");
+  cursorY += 18;
+
+  // Consecutive
+  cursorY = drawField(
+    doc,
+    "Consecutivo",
+    invoiceNumberLabel(data),
+    "#18181b",
+    leftMargin,
+    cursorY,
+    pageWidth,
+  );
+
+  // Workshop (issuer)
+  cursorY = drawSectionHeading(doc, "TALLER", leftMargin, cursorY, pageWidth);
+
+  doc.font("Helvetica-Bold").fontSize(11);
   doc.fillColor("#18181b");
   doc.text(data.workshopSettings.businessName, leftMargin, cursorY, {
     width: pageWidth,
     align: "left",
   });
-
-  cursorY += 26;
+  cursorY += 15;
 
   doc.font("Helvetica").fontSize(9);
   doc.fillColor("#52525b");
@@ -216,68 +302,25 @@ function renderContent(
   }
 
   if (workshopDetails.length > 0) {
-    doc.text(workshopDetails.join(" · "), leftMargin, cursorY, {
+    doc.text(workshopDetails.join("\n"), leftMargin, cursorY, {
       width: pageWidth,
       align: "left",
     });
-    cursorY += 28;
+    cursorY += workshopDetails.length * 12 + 16;
   } else {
-    cursorY += 10;
+    cursorY += 12;
   }
 
-  // Title and invoice number
-  doc.font("Helvetica-Bold").fontSize(22);
+  // Customer (issued to)
+  cursorY = drawSectionHeading(doc, "CLIENTE", leftMargin, cursorY, pageWidth);
+
+  doc.font("Helvetica-Bold").fontSize(11);
   doc.fillColor("#18181b");
-
-  const titleText = data.invoice.status === "draft" ? "BORRADOR" : "FACTURA";
-  doc.text(titleText, leftMargin, cursorY, { width: pageWidth, align: "left" });
-
-  if (data.invoice.status !== "draft") {
-    doc.font("Helvetica").fontSize(11);
-    doc.text(`No. ${invoiceNumberLabel(data)}`, leftMargin, cursorY + 28, {
-      width: pageWidth,
-      align: "left",
-    });
-    cursorY += 50;
-  } else {
-    cursorY += 32;
-  }
-
-  doc.font("Helvetica").fontSize(9);
-  doc.fillColor("#52525b");
-
-  const dateLabel = data.invoice.status === "draft" ? "Fecha de creación" : "Fecha de emisión";
-  const dateValue =
-    data.invoice.status === "draft"
-      ? formatDateTime(data.invoice.createdAt)
-      : formatDateTime(data.invoice.issuedAt);
-  doc.text(`${dateLabel}: ${dateValue}`, leftMargin, cursorY, {
+  doc.text(data.customer.name, leftMargin, cursorY, {
     width: pageWidth,
     align: "left",
   });
-  cursorY += 24;
-
-  // Status stamp
-  const statusText = statusLabel(data.invoice.status);
-  if (statusText) {
-    doc.font("Helvetica-Bold").fontSize(14);
-    doc.fillColor(
-      data.invoice.status === "void" ? "#dc2626" : "#71717a",
-    );
-    doc.text(statusText, leftMargin, cursorY, { width: pageWidth, align: "left" });
-    cursorY += 28;
-  }
-
-  // Customer info
-  doc.font("Helvetica-Bold").fontSize(11);
-  doc.fillColor("#18181b");
-  doc.text("Cliente", leftMargin, cursorY, { width: pageWidth, align: "left" });
-  cursorY += 18;
-
-  doc.font("Helvetica").fontSize(10);
-  doc.fillColor("#18181b");
-  doc.text(data.customer.name, leftMargin, cursorY, { width: pageWidth, align: "left" });
-  cursorY += 16;
+  cursorY += 15;
 
   doc.font("Helvetica").fontSize(9);
   doc.fillColor("#52525b");
@@ -301,13 +344,44 @@ function renderContent(
   }
 
   if (customerDetails.length > 0) {
-    doc.text(customerDetails.join(" · "), leftMargin, cursorY, {
+    doc.text(customerDetails.join("\n"), leftMargin, cursorY, {
       width: pageWidth,
       align: "left",
     });
-    cursorY += 24;
+    cursorY += customerDetails.length * 12 + 16;
   } else {
-    cursorY += 10;
+    cursorY += 12;
+  }
+
+  // Date
+  const dateLabel =
+    data.invoice.status === "draft" ? "Fecha de creación" : "Fecha de emisión";
+  const dateValue =
+    data.invoice.status === "draft"
+      ? formatDateTime(data.invoice.createdAt)
+      : formatDateTime(data.invoice.issuedAt);
+  cursorY = drawField(
+    doc,
+    dateLabel,
+    dateValue,
+    "#18181b",
+    leftMargin,
+    cursorY,
+    pageWidth,
+  );
+
+  // Status (explicit)
+  const statusText = statusLabel(data.invoice.status);
+  if (statusText) {
+    cursorY = drawField(
+      doc,
+      "Estado de la factura",
+      statusText,
+      statusColor(data.invoice.status),
+      leftMargin,
+      cursorY,
+      pageWidth,
+    );
   }
 
   cursorY += 10;
@@ -358,7 +432,10 @@ function renderContent(
 
   data.adjustments.forEach((adjustment) => {
     const sign = adjustment.effect === "add" ? "+" : "−";
-    drawTotalRow(adjustmentLabel(adjustment), `${sign} ${formatCurrency(adjustment.amountCop)}`);
+    drawTotalRow(
+      adjustmentLabel(adjustment),
+      `${sign} ${formatCurrency(adjustment.amountCop)}`,
+    );
   });
 
   drawTotalRow(
