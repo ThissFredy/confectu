@@ -70,6 +70,15 @@ export function InvoiceLineEditor({
   }
 
   function handleServiceChange(index: number, serviceId: string) {
+    if (!serviceId) {
+      updateLine(index, {
+        serviceId: null,
+        description: "",
+        unitPriceCop: 0,
+      });
+      return;
+    }
+
     const service = servicesById.get(serviceId);
     if (!service) {
       return;
