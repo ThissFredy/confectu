@@ -5,6 +5,7 @@ import { InvoiceForm } from "@/modules/invoices/components/InvoiceForm";
 import { createInvoiceDraft } from "@/modules/invoices/actions";
 import { listActiveServices } from "@/modules/services/queries";
 import { listCustomers } from "@/modules/clients/queries";
+import { getCurrentWorkshopSettings } from "@/modules/workshops/queries";
 import type { Service } from "@/modules/services/types";
 import type { Customer } from "@/modules/clients/types";
 
@@ -23,6 +24,8 @@ export default async function NewInvoicePage() {
   } catch {
     hasError = true;
   }
+
+  const settings = await getCurrentWorkshopSettings(supabase).catch(() => null);
 
   if (hasError) {
     return (
@@ -62,6 +65,7 @@ export default async function NewInvoicePage() {
           mode="create"
           services={services}
           customers={customers}
+          defaultPaymentInstructions={settings?.paymentInstructions ?? undefined}
           action={createInvoiceDraft}
         />
       </div>
