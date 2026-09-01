@@ -3,7 +3,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { resolveAuthState } from "@/modules/auth/queries";
 import { isInternalRoute } from "@/modules/auth/validations";
 
-const PUBLIC_ROUTES = ["/", "/login", "/api/auth/callback", "/account-disabled"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/api/auth/callback",
+  "/account-disabled",
+  "/legal/aviso-legal",
+  "/legal/cookies",
+  "/legal/privacidad",
+  "/legal/terminos",
+];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.includes(pathname);

@@ -18,6 +18,35 @@ export default function Home() {
             Iniciar sesión
           </Link>
         </div>
+        <nav
+          aria-label="Legal"
+          className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-zinc-500 dark:text-zinc-400"
+        >
+          <Link
+            href="/legal/aviso-legal"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Aviso legal
+          </Link>
+          <Link
+            href="/legal/privacidad"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Privacidad
+          </Link>
+          <Link
+            href="/legal/terminos"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Términos
+          </Link>
+          <Link
+            href="/legal/cookies"
+            className="hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Cookies
+          </Link>
+        </nav>
       </main>
     </div>
   );
