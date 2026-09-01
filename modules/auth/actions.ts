@@ -40,6 +40,80 @@ export async function signOut(): Promise<never> {
   redirect("/");
 }
 
+export async function deleteMyAccount(
+  formData: FormData,
+): Promise<AuthActionResult> {
+  const supabase = await createClient();
+  const authState = await resolveAuthState(supabase);
+
+  if (authState.status === "unauthenticated") {
+    return { success: false, error: "No hay sesión activa." };
+  }
+
+  if (authState.status === "inactive") {
+    return { success: false, error: "Tu cuenta está desactivada." };
+  }
+
+  if (authState.status === "needs_onboarding") {
+    return {
+      success: false,
+      error: "Tu cuenta aún no tiene un taller configurado.",
+    };
+  }
+
+  if (!authState.profile) {
+    return { success: false, error: "No hay sesión activa." };
+  }
+
+  if (formData.get("confirm") !== "true") {
+    return {
+      success: false,
+      error: "No se confirmó la eliminación de la cuenta.",
+    };
+  }
+
+  const profileId = authState.profile.id;
+  const isClient = authState.profile.role === "CLIENT";
+
+  // Soft delete: desactivar el taller primero. Si el perfil falla, se restaura.
+  if (isClient) {
+    const { error: workshopError } = await supabase
+      .from("workshops")
+      .update({ is_active: false })
+      .eq("owner_id", profileId);
+
+    if (workshopError) {
+      return {
+        success: false,
+        error: "No se pudo eliminar la cuenta. Intenta de nuevo.",
+      };
+    }
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_active: false })
+    .eq("id", profileId);
+
+  if (error) {
+    if (isClient) {
+      await supabase
+        .from("workshops")
+        .update({ is_active: true })
+        .eq("owner_id", profileId);
+    }
+
+    return {
+      success: false,
+      error: "No se pudo eliminar la cuenta. Intenta de nuevo.",
+    };
+  }
+
+  await supabase.auth.signOut();
+
+  return { success: true };
+}
+
 export async function completeWorkshopSetup(
   formData: FormData,
 ): Promise<AuthActionResult> {

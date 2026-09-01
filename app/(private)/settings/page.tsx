@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { DeleteAccountSection } from "@/modules/auth/components/DeleteAccountSection";
 import { NotFoundNotice } from "@/modules/workshops/components/NotFoundNotice";
 import { WorkshopSettingsForm } from "@/modules/workshops/components/WorkshopSettingsForm";
 import { updateMyWorkshopSettings } from "@/modules/workshops/actions";
@@ -35,6 +36,9 @@ export default async function SettingsPage() {
           currentLogoPath={workshop.settings?.logoPath ?? null}
           action={updateMyWorkshopSettings}
         />
+        <div className="mt-12 border-t border-zinc-200 pt-8 dark:border-zinc-800">
+          <DeleteAccountSection hasWorkshop />
+        </div>
       </div>
     </div>
   );
