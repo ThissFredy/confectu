@@ -469,10 +469,15 @@ function renderContent(
 
     if (data.invoice.paymentInstructions) {
       doc.fillColor("#52525b");
-      doc.text(data.invoice.paymentInstructions, leftMargin, cursorY, {
-        width: pageWidth,
-        align: "left",
-      });
+      doc.text(
+        data.invoice.paymentInstructions.replace(/\r\n?/g, "\n"),
+        leftMargin,
+        cursorY,
+        {
+          width: pageWidth,
+          align: "left",
+        },
+      );
       cursorY += 16;
     }
   }
