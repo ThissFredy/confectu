@@ -36,7 +36,9 @@ const statusOptions: Array<{ value: "all" | InvoiceStatus; label: string }> = [
 
 export function InvoiceList({ invoices }: InvoiceListProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>(
+    "all",
+  );
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
