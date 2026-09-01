@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { showToast } from "nextjs-toast-notify";
 import type { Customer } from "@/modules/clients/types";
 import { createCustomerFromInvoice } from "../actions";
@@ -13,20 +12,6 @@ interface CustomerPickerProps {
   customers: Customer[];
 }
 
-function CreateCustomerSubmitButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="flex h-12 min-h-[44px] w-full items-center justify-center rounded-lg bg-zinc-900 px-6 text-base font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-    >
-      {pending ? "Creando..." : "Crear cliente"}
-    </button>
-  );
-}
-
 export function CustomerPicker({
   selectedCustomerId,
   onSelect,
@@ -34,6 +19,7 @@ export function CustomerPicker({
 }: CustomerPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [createResult, setCreateResult] = useState<CustomerFromInvoiceResult | null>(
     null,
   );
@@ -67,6 +53,8 @@ export function CustomerPicker({
   }, [customers, selectedCustomerId]);
 
   async function handleCreateCustomer() {
+    setIsCreating(true);
+
     const formData = new FormData();
     formData.set("name", newCustomer.name.trim());
     formData.set("phone", newCustomer.phone.trim());
@@ -75,6 +63,7 @@ export function CustomerPicker({
 
     const response = await createCustomerFromInvoice(formData);
     setCreateResult(response);
+    setIsCreating(false);
 
     if (response.success && response.customerId) {
       showToast.success("Cliente creado", { position: "top-right" });
@@ -179,7 +168,7 @@ export function CustomerPicker({
           </button>
         </>
       ) : (
-        <form action={handleCreateCustomer} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
             Crear cliente nuevo
           </h3>
@@ -284,7 +273,14 @@ export function CustomerPicker({
             </p>
           ) : null}
 
-          <CreateCustomerSubmitButton />
+          <button
+            type="button"
+            onClick={handleCreateCustomer}
+            disabled={isCreating}
+            className="flex h-12 min-h-[44px] w-full items-center justify-center rounded-lg bg-zinc-900 px-6 text-base font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            {isCreating ? "Creando..." : "Crear cliente"}
+          </button>
 
           <button
             type="button"
@@ -293,7 +289,7 @@ export function CustomerPicker({
           >
             Cancelar
           </button>
-        </form>
+        </div>
       )}
     </div>
   );
