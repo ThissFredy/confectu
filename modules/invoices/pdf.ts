@@ -289,7 +289,7 @@ function renderContent(
 
   const workshopDetails: string[] = [];
   if (data.workshopSettings.taxId) {
-    workshopDetails.push(`NIT / ID: ${data.workshopSettings.taxId}`);
+    workshopDetails.push(`CC / NIT: ${data.workshopSettings.taxId}`);
   }
   if (data.workshopSettings.phone) {
     workshopDetails.push(`Tel: ${data.workshopSettings.phone}`);
@@ -326,9 +326,9 @@ function renderContent(
   doc.fillColor("#52525b");
 
   const customerDetails: string[] = [];
-  if (data.customer.documentTypeName && data.customer.documentNumber) {
+  if (data.customer.documentTypeCode && data.customer.documentNumber) {
     customerDetails.push(
-      `${data.customer.documentTypeName}: ${data.customer.documentNumber}`,
+      `${data.customer.documentTypeCode}: ${data.customer.documentNumber}`,
     );
   } else if (data.customer.documentNumber) {
     customerDetails.push(`Documento: ${data.customer.documentNumber}`);

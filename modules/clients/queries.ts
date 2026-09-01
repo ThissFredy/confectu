@@ -14,7 +14,7 @@ interface DbCustomer {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  document_types: { name: string }[] | null;
+  document_types: { code: string; name: string } | null;
 }
 
 function mapCustomer(row: DbCustomer): Customer {
@@ -23,7 +23,8 @@ function mapCustomer(row: DbCustomer): Customer {
     workshopId: row.workshop_id,
     name: row.name,
     documentTypeId: row.document_type_id,
-    documentTypeName: row.document_types?.[0]?.name ?? null,
+    documentTypeName: row.document_types?.name ?? null,
+    documentTypeCode: row.document_types?.code ?? null,
     documentNumber: row.document_number,
     phone: row.phone,
     email: row.email,
@@ -48,7 +49,7 @@ export async function listCustomers(
   let query = supabase
     .from("customers")
     .select(
-      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(name)",
+      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(code, name)",
     )
     .order("name", { ascending: true });
 
@@ -62,7 +63,7 @@ export async function listCustomers(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: DbCustomer) => mapCustomer(row));
+  return (data ?? []).map((row) => mapCustomer(row as unknown as DbCustomer));
 }
 
 export async function getCustomerById(
@@ -72,7 +73,7 @@ export async function getCustomerById(
   const { data, error } = await supabase
     .from("customers")
     .select(
-      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(name)",
+      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(code, name)",
     )
     .eq("id", id)
     .single();
@@ -81,7 +82,7 @@ export async function getCustomerById(
     return null;
   }
 
-  return mapCustomer(data as DbCustomer);
+  return mapCustomer(data as unknown as DbCustomer);
 }
 
 export async function getActiveCustomerCount(supabase: SupabaseClient): Promise<number> {
@@ -106,7 +107,7 @@ export async function searchCustomersForInvoice(
   let dbQuery = supabase
     .from("customers")
     .select(
-      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(name)",
+      "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(code, name)",
     )
     .eq("is_active", true);
 
@@ -124,5 +125,5 @@ export async function searchCustomersForInvoice(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: DbCustomer) => mapCustomer(row));
+  return (data ?? []).map((row) => mapCustomer(row as unknown as DbCustomer));
 }
