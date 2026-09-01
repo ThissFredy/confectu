@@ -133,6 +133,9 @@ export function InvoiceForm({
 
     if (Object.keys(fieldErrors).length > 0) {
       setResult({ success: false, fieldErrors });
+      showToast.error("Revisa los campos marcados e inténtalo de nuevo.", {
+        position: "top-right",
+      });
       return;
     }
 
@@ -181,6 +184,10 @@ export function InvoiceForm({
       } else {
         router.refresh();
       }
+    } else if (response.fieldErrors && Object.keys(response.fieldErrors).length > 0) {
+      showToast.error("Revisa los campos marcados e inténtalo de nuevo.", {
+        position: "top-right",
+      });
     } else if (response.error) {
       showToast.error(response.error, { position: "top-right" });
     }
