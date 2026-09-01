@@ -478,13 +478,13 @@ function renderContent(
   }
 
   // Footer
-  const footerY = doc.page.height - doc.page.margins.bottom - 20;
-  doc.font("Helvetica").fontSize(8);
-  doc.fillColor("#a1a1aa");
-  doc.text(
-    "Este documento es un comprobante interno. No tiene validez fiscal ante la DIAN.",
-    leftMargin,
-    footerY,
-    { width: pageWidth, align: "center" },
-  );
+  // const footerY = doc.page.height - doc.page.margins.bottom - 20;
+  // doc.font("Helvetica").fontSize(8);
+  // doc.fillColor("#a1a1aa");
+  // doc.text(
+  //   "Este documento es un comprobante interno. No tiene validez fiscal ante la DIAN.",
+  //   leftMargin,
+  //   footerY,
+  //   { width: pageWidth, align: "center" },
+  // );
 }
