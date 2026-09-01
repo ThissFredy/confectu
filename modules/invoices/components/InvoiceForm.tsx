@@ -19,6 +19,7 @@ interface InvoiceFormProps {
   invoice?: InvoiceWithRelations;
   services: Service[];
   customers: Customer[];
+  defaultPaymentInstructions?: string;
   action: (formData: FormData) => Promise<InvoiceActionResult>;
   issueAction?: (formData: FormData) => Promise<InvoiceActionResult>;
   deleteAction?: (formData: FormData) => Promise<InvoiceActionResult>;
@@ -47,6 +48,7 @@ export function InvoiceForm({
   invoice,
   services,
   customers,
+  defaultPaymentInstructions,
   action,
   issueAction,
   deleteAction,
@@ -87,7 +89,7 @@ export function InvoiceForm({
     invoice?.invoice.paymentMethod ?? "",
   );
   const [paymentInstructions, setPaymentInstructions] = useState(
-    invoice?.invoice.paymentInstructions ?? "",
+    invoice?.invoice.paymentInstructions ?? defaultPaymentInstructions ?? "",
   );
   const [notes, setNotes] = useState(invoice?.invoice.notes ?? "");
 

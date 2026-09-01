@@ -11,6 +11,7 @@ import {
 import { getInvoiceById } from "@/modules/invoices/queries";
 import { listActiveServices } from "@/modules/services/queries";
 import { listCustomers } from "@/modules/clients/queries";
+import { getCurrentWorkshopSettings } from "@/modules/workshops/queries";
 
 interface InvoiceDetailPageProps {
   params: Promise<{ id: string }>;
@@ -39,6 +40,8 @@ export default async function InvoiceDetailPage({
   } catch {
     hasError = true;
   }
+
+  const settings = await getCurrentWorkshopSettings(supabase).catch(() => null);
 
   if (hasError || !invoice) {
     return (
@@ -72,6 +75,7 @@ export default async function InvoiceDetailPage({
             invoice={invoice}
             services={services}
             customers={customers}
+            defaultPaymentInstructions={settings?.paymentInstructions ?? undefined}
             action={updateInvoiceDraft}
             issueAction={issueInvoice}
             deleteAction={deleteInvoice}
