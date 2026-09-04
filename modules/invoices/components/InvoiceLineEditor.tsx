@@ -124,7 +124,9 @@ export function InvoiceLineEditor({
               <select
                 id={`line_${index}_service`}
                 value={line.serviceId ?? ""}
-                onChange={(event) => handleServiceChange(index, event.target.value)}
+                onChange={(event) =>
+                  handleServiceChange(index, event.target.value)
+                }
                 className="h-12 w-full rounded-lg border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100 dark:focus:ring-zinc-100/10"
               >
                 <option value="">Línea personalizada</option>
@@ -166,12 +168,14 @@ export function InvoiceLineEditor({
                 <input
                   id={`line_${index}_quantity`}
                   type="number"
-                  min="0.01"
-                  step="0.01"
-                  inputMode="decimal"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
                   value={line.quantity || ""}
                   onChange={(event) =>
-                    updateLine(index, { quantity: parseNumber(event.target.value) })
+                    updateLine(index, {
+                      quantity: parseNumber(event.target.value),
+                    })
                   }
                   className="h-12 w-full rounded-lg border border-zinc-300 bg-white px-4 text-base text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100 dark:focus:ring-zinc-100/10"
                 />

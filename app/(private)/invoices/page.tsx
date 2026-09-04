@@ -36,12 +36,6 @@ export default async function InvoicesPage() {
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
           Facturas
         </h1>
-        <Link
-          href="/invoices/new"
-          className="inline-flex h-12 min-h-[44px] items-center justify-center rounded-lg bg-zinc-900 px-6 text-base font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          Crear factura
-        </Link>
       </div>
       <InvoiceList invoices={invoices} />
     </div>
