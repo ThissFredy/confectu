@@ -100,19 +100,6 @@ export async function getActiveCustomerCount(supabase: SupabaseClient): Promise<
   return count ?? 0;
 }
 
-export async function getActiveCustomerCount(supabase: SupabaseClient): Promise<number> {
-  const { count, error } = await supabase
-    .from("customers")
-    .select("id", { count: "exact", head: true })
-    .eq("is_active", true);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return count ?? 0;
-}
-
 export async function searchCustomersForInvoice(
   supabase: SupabaseClient,
   query: string,
