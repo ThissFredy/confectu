@@ -61,7 +61,11 @@ export async function resolveAuthState(
   const profile = await getProfile(supabase);
 
   if (!profile) {
-    return { user: authUser, profile: null, status: "unauthenticated" };
+    console.error(
+      "[auth] resolveAuthState: usuario con sesión pero sin fila en profiles",
+      { userId: authUser.id },
+    );
+    return { user: authUser, profile: null, status: "error" };
   }
 
   if (!profile.isActive) {

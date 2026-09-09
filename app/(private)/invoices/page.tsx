@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RetryButton } from "@/modules/admin/components/RetryButton";
 import { InvoiceList } from "@/modules/invoices/components/InvoiceList";

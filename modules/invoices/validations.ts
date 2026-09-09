@@ -12,9 +12,9 @@ const MAX_PAYMENT_METHOD_LENGTH = 50;
 const MAX_NOTES_LENGTH = 2000;
 const MAX_LINE_UNIT_PRICE = 9999999999.99;
 const MAX_LINE_QUANTITY = 9999999.99;
-const MAX_LINES = 50;
+export const MAX_LINES = 50;
 const MIN_LINES = 1;
-const MAX_ADJUSTMENTS = 20;
+export const MAX_ADJUSTMENTS = 20;
 
 const VALID_CATEGORIES = ["tax", "withholding", "discount", "fee"] as const;
 const VALID_MODES = ["percentage", "fixed"] as const;

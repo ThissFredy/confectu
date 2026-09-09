@@ -10,6 +10,7 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const oauthError = params.error === "oauth";
+  const profileError = params.error === "profile";
   const nextParam =
     typeof params.next === "string" && isInternalRoute(params.next)
       ? params.next
@@ -25,7 +26,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Inicia sesión para continuar
         </p>
 
-        {oauthError ? (
+        {profileError ? (
+          <div
+            role="alert"
+            className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400"
+          >
+            Tu cuenta no se configuró correctamente. Contacta a soporte para
+            continuar.
+          </div>
+        ) : oauthError ? (
           <div
             role="alert"
             className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950 dark:text-red-400"

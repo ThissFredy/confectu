@@ -68,7 +68,8 @@ export async function listCustomersByWorkshop(
     .order("name", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[admin/clients] listCustomersByWorkshop", error);
+    throw new Error("No se pudieron cargar los clientes.");
   }
 
   return (data ?? []).map((row) => mapCustomer(row as unknown as DbCustomer));

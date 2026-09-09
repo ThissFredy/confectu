@@ -60,7 +60,8 @@ export async function listCustomers(
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[clients] listCustomers", error);
+    throw new Error("No se pudieron cargar los clientes.");
   }
 
   return (data ?? []).map((row) => mapCustomer(row as unknown as DbCustomer));
@@ -92,7 +93,8 @@ export async function getActiveCustomerCount(supabase: SupabaseClient): Promise<
     .eq("is_active", true);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[clients] getActiveCustomerCount", error);
+    throw new Error("No se pudo cargar el conteo de clientes.");
   }
 
   return count ?? 0;
@@ -102,7 +104,12 @@ export async function searchCustomersForInvoice(
   supabase: SupabaseClient,
   query: string,
 ): Promise<Customer[]> {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = query
+    .trim()
+    .toLowerCase()
+    .replace(/[(),]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
   let dbQuery = supabase
     .from("customers")
@@ -122,7 +129,8 @@ export async function searchCustomersForInvoice(
     .limit(20);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[clients] searchCustomersForInvoice", error);
+    throw new Error("No se pudo realizar la búsqueda de clientes.");
   }
 
   return (data ?? []).map((row) => mapCustomer(row as unknown as DbCustomer));
