@@ -30,7 +30,8 @@ export async function listDocumentTypes(
     .order("code", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[admin/document-types] listDocumentTypes", error);
+    throw new Error("No se pudieron cargar los tipos de documento.");
   }
 
   return (data ?? []).map((row: DbDocumentType) => mapDocumentType(row));
@@ -63,7 +64,8 @@ export async function getActiveDocumentTypes(
     .order("name", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[admin/document-types] getActiveDocumentTypes", error);
+    throw new Error("No se pudieron cargar los tipos de documento.");
   }
 
   return (data ?? []).map((row: DbDocumentType) => mapDocumentType(row));
@@ -91,7 +93,8 @@ async function countTable(
     .select("*", { count: "exact", head: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[admin/document-types] countTable", error);
+    throw new Error("No se pudieron cargar los conteos.");
   }
 
   return count ?? 0;

@@ -20,7 +20,8 @@ export type AuthStatus =
   | "unauthenticated"
   | "needs_onboarding"
   | "active"
-  | "inactive";
+  | "inactive"
+  | "error";
 
 export interface AuthState {
   user: AuthUser | null;

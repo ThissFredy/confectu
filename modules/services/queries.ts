@@ -51,7 +51,8 @@ export async function listServices(
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[services] listServices", error);
+    throw new Error("No se pudieron cargar los servicios.");
   }
 
   return (data ?? []).map((row: DbService) => mapService(row));
@@ -88,7 +89,8 @@ export async function listActiveServices(
     .order("name", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[services] listActiveServices", error);
+    throw new Error("No se pudieron cargar los servicios.");
   }
 
   return (data ?? []).map((row: DbService) => mapService(row));
@@ -107,7 +109,8 @@ export async function listServicesByWorkshop(
     .order("name", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[services] listServicesByWorkshop", error);
+    throw new Error("No se pudieron cargar los servicios.");
   }
 
   return (data ?? []).map((row: DbService) => mapService(row));

@@ -164,7 +164,8 @@ export async function listInvoices(
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] listInvoices", error);
+    throw new Error("No se pudieron cargar las facturas.");
   }
 
   return (data ?? []).map((row) => {
@@ -469,7 +470,8 @@ export async function getDraftInvoiceCount(supabase: SupabaseClient): Promise<nu
     .eq("status", "draft");
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] getDraftInvoiceCount", error);
+    throw new Error("No se pudo cargar el conteo de facturas.");
   }
 
   return count ?? 0;
@@ -488,7 +490,8 @@ export async function getRecentInvoices(
     .limit(limit);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] getRecentInvoices", error);
+    throw new Error("No se pudieron cargar las facturas.");
   }
 
   return (data ?? []).map((row) => {

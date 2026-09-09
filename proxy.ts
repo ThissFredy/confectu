@@ -75,6 +75,16 @@ export async function proxy(request: NextRequest) {
     return copyCookies(response, NextResponse.redirect(loginUrl));
   }
 
+  if (authState.status === "error") {
+    if (isPublicRoute(pathname)) {
+      return response;
+    }
+    return copyCookies(
+      response,
+      NextResponse.redirect(new URL("/login?error=profile", request.url)),
+    );
+  }
+
   if (authState.status === "inactive") {
     if (pathname === "/account-disabled") {
       return response;
@@ -105,7 +115,7 @@ export async function proxy(request: NextRequest) {
   const role = authState.profile?.role;
 
   if (role === "ADMIN") {
-    if (isAdminRoute(pathname) || pathname === "/account-disabled") {
+    if (isAdminRoute(pathname)) {
       return response;
     }
     if (pathname === "/login") {
