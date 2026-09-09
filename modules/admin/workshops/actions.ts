@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { hasValidImageSignature } from "@/lib/image-validation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAuthState } from "@/modules/auth/queries";
 import { listCustomersByWorkshop } from "@/modules/admin/clients/queries";
@@ -206,20 +207,21 @@ export async function updateWorkshopSettings(
       };
     }
 
+    if (!(await hasValidImageSignature(logoFile))) {
+      return {
+        success: false,
+        error: "El archivo no es una imagen válida.",
+      };
+    }
+
     const ext = getLogoExtension(logoFile.type);
     const path = `${workshopId}/logo.${ext}`;
-
-    if (existingSettings.logo_path) {
-      await supabase.storage
-        .from("workshop-logos")
-        .remove([existingSettings.logo_path]);
-    }
 
     const { error: uploadError } = await supabase.storage
       .from("workshop-logos")
       .upload(path, logoFile, {
         contentType: logoFile.type,
-        upsert: false,
+        upsert: true,
       });
 
     if (uploadError) {
@@ -227,6 +229,12 @@ export async function updateWorkshopSettings(
         success: false,
         error: "No se pudo subir el logo. Intenta de nuevo.",
       };
+    }
+
+    if (existingSettings.logo_path && existingSettings.logo_path !== path) {
+      await supabase.storage
+        .from("workshop-logos")
+        .remove([existingSettings.logo_path]);
     }
 
     newLogoPath = path;
@@ -317,6 +325,13 @@ export async function uploadWorkshopLogo(
     };
   }
 
+  if (!(await hasValidImageSignature(logo))) {
+    return {
+      success: false,
+      error: "El archivo no es una imagen válida.",
+    };
+  }
+
   const supabase = await createClient();
 
   const { data: existingSettings } = await supabase
@@ -332,17 +347,11 @@ export async function uploadWorkshopLogo(
   const ext = getLogoExtension(logo.type);
   const path = `${workshopId}/logo.${ext}`;
 
-  if (existingSettings.logo_path) {
-    await supabase.storage
-      .from("workshop-logos")
-      .remove([existingSettings.logo_path]);
-  }
-
   const { error: uploadError } = await supabase.storage
     .from("workshop-logos")
     .upload(path, logo, {
       contentType: logo.type,
-      upsert: false,
+      upsert: true,
     });
 
   if (uploadError) {
@@ -350,6 +359,12 @@ export async function uploadWorkshopLogo(
       success: false,
       error: "No se pudo subir el logo. Intenta de nuevo.",
     };
+  }
+
+  if (existingSettings.logo_path && existingSettings.logo_path !== path) {
+    await supabase.storage
+      .from("workshop-logos")
+      .remove([existingSettings.logo_path]);
   }
 
   const { error: updateError } = await supabase

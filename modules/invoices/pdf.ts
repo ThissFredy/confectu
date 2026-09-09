@@ -289,7 +289,7 @@ function renderContent(
 
   const workshopDetails: string[] = [];
   if (data.workshopSettings.taxId) {
-    workshopDetails.push(`NIT / ID: ${data.workshopSettings.taxId}`);
+    workshopDetails.push(`CC / NIT: ${data.workshopSettings.taxId}`);
   }
   if (data.workshopSettings.phone) {
     workshopDetails.push(`Tel: ${data.workshopSettings.phone}`);
@@ -326,9 +326,9 @@ function renderContent(
   doc.fillColor("#52525b");
 
   const customerDetails: string[] = [];
-  if (data.customer.documentTypeName && data.customer.documentNumber) {
+  if (data.customer.documentTypeCode && data.customer.documentNumber) {
     customerDetails.push(
-      `${data.customer.documentTypeName}: ${data.customer.documentNumber}`,
+      `${data.customer.documentTypeCode}: ${data.customer.documentNumber}`,
     );
   } else if (data.customer.documentNumber) {
     customerDetails.push(`Documento: ${data.customer.documentNumber}`);
@@ -469,22 +469,27 @@ function renderContent(
 
     if (data.invoice.paymentInstructions) {
       doc.fillColor("#52525b");
-      doc.text(data.invoice.paymentInstructions, leftMargin, cursorY, {
-        width: pageWidth,
-        align: "left",
-      });
+      doc.text(
+        data.invoice.paymentInstructions.replace(/\r\n?/g, "\n"),
+        leftMargin,
+        cursorY,
+        {
+          width: pageWidth,
+          align: "left",
+        },
+      );
       cursorY += 16;
     }
   }
 
   // Footer
-  const footerY = doc.page.height - doc.page.margins.bottom - 20;
-  doc.font("Helvetica").fontSize(8);
-  doc.fillColor("#a1a1aa");
-  doc.text(
-    "Este documento es un comprobante interno. No tiene validez fiscal ante la DIAN.",
-    leftMargin,
-    footerY,
-    { width: pageWidth, align: "center" },
-  );
+  // const footerY = doc.page.height - doc.page.margins.bottom - 20;
+  // doc.font("Helvetica").fontSize(8);
+  // doc.fillColor("#a1a1aa");
+  // doc.text(
+  //   "Este documento es un comprobante interno. No tiene validez fiscal ante la DIAN.",
+  //   leftMargin,
+  //   footerY,
+  //   { width: pageWidth, align: "center" },
+  // );
 }

@@ -166,9 +166,10 @@ export async function updateCustomer(
     .from("customers")
     .select("id, workshop_id")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "El cliente no existe o no pertenece a tu taller." };
   }
 
@@ -242,9 +243,10 @@ export async function toggleCustomerStatus(
     .from("customers")
     .select("id, is_active, workshop_id")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "El cliente no existe o no pertenece a tu taller." };
   }
 

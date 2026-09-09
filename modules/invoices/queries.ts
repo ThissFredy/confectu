@@ -120,7 +120,7 @@ interface DbCustomer {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  document_types: { name: string }[] | null;
+  document_types: { code: string; name: string } | null;
 }
 
 function mapCustomer(row: DbCustomer): Customer {
@@ -129,7 +129,8 @@ function mapCustomer(row: DbCustomer): Customer {
     workshopId: row.workshop_id,
     name: row.name,
     documentTypeId: row.document_type_id,
-    documentTypeName: row.document_types?.[0]?.name ?? null,
+    documentTypeName: row.document_types?.name ?? null,
+    documentTypeCode: row.document_types?.code ?? null,
     documentNumber: row.document_number,
     phone: row.phone,
     email: row.email,
@@ -163,12 +164,13 @@ export async function listInvoices(
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] listInvoices", error);
+    throw new Error("No se pudieron cargar las facturas.");
   }
 
   return (data ?? []).map((row) => {
     const customerName =
-      (row.customers as { name: string }[] | null)?.[0]?.name ?? "Sin nombre";
+      (row.customers as unknown as { name: string } | null)?.name ?? "Sin nombre";
     return {
       ...mapInvoice(row as unknown as DbInvoice),
       customerName,
@@ -199,7 +201,7 @@ export async function getInvoiceById(
       supabase
         .from("customers")
         .select(
-          "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(name)"
+          "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(code, name)"
         )
         .eq("id", invoice.customerId)
         .single(),
@@ -262,7 +264,7 @@ export async function getInvoiceForPdf(
     supabase
       .from("customers")
       .select(
-        "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(name)"
+        "id, workshop_id, name, document_type_id, document_number, phone, email, address, notes, is_active, created_at, updated_at, document_types(code, name)"
       )
       .eq("id", invoice.customerId)
       .single(),
@@ -468,7 +470,8 @@ export async function getDraftInvoiceCount(supabase: SupabaseClient): Promise<nu
     .eq("status", "draft");
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] getDraftInvoiceCount", error);
+    throw new Error("No se pudo cargar el conteo de facturas.");
   }
 
   return count ?? 0;
@@ -487,12 +490,13 @@ export async function getRecentInvoices(
     .limit(limit);
 
   if (error) {
-    throw new Error(error.message);
+    console.error("[invoices] getRecentInvoices", error);
+    throw new Error("No se pudieron cargar las facturas.");
   }
 
   return (data ?? []).map((row) => {
     const customerName =
-      (row.customers as { name: string }[] | null)?.[0]?.name ?? "Sin nombre";
+      (row.customers as unknown as { name: string } | null)?.name ?? "Sin nombre";
     return {
       ...mapInvoice(row as unknown as DbInvoice),
       customerName,

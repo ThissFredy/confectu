@@ -4,6 +4,7 @@ export interface Customer {
   name: string;
   documentTypeId: string | null;
   documentTypeName: string | null;
+  documentTypeCode: string | null;
   documentNumber: string | null;
   phone: string | null;
   email: string | null;

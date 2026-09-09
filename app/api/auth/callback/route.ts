@@ -30,6 +30,10 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
+  if (authState.status === "error") {
+    return NextResponse.redirect(new URL("/login?error=profile", request.url));
+  }
+
   if (authState.status === "active" && authState.profile) {
     const target =
       typeof next === "string" && isInternalRoute(next) ? next : null;

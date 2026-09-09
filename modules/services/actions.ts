@@ -120,9 +120,10 @@ export async function updateService(
     .from("services")
     .select("id, workshop_id")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "El servicio no existe o no pertenece a tu taller." };
   }
 
@@ -177,9 +178,10 @@ export async function toggleServiceStatus(
     .from("services")
     .select("id, is_active, workshop_id")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "El servicio no existe o no pertenece a tu taller." };
   }
 
@@ -219,9 +221,10 @@ export async function deleteService(
     .from("services")
     .select("id, workshop_id")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "El servicio no existe o no pertenece a tu taller." };
   }
 

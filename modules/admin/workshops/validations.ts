@@ -66,6 +66,9 @@ export function validateWorkshopSettingsInput(
   if (!Number.isFinite(input.nextInvoiceNumber) || input.nextInvoiceNumber < 1) {
     fieldErrors.next_invoice_number =
       "El número de factura debe ser mayor o igual a 1.";
+  } else if (!Number.isInteger(input.nextInvoiceNumber)) {
+    fieldErrors.next_invoice_number =
+      "El número de factura debe ser un número entero.";
   } else if (input.nextInvoiceNumber < currentNextInvoiceNumber) {
     fieldErrors.next_invoice_number =
       "El número de factura no puede disminuir.";

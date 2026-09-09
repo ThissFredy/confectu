@@ -12,7 +12,12 @@ export async function GET(request: Request, { params }: PdfRouteParams) {
   const supabase = await createClient();
   const authState = await resolveAuthState(supabase);
 
-  if (authState.status === "unauthenticated" || authState.status === "inactive") {
+  if (
+    authState.status === "unauthenticated" ||
+    authState.status === "inactive" ||
+    authState.status === "needs_onboarding" ||
+    authState.status === "error"
+  ) {
     return new Response("No autorizado", { status: 401 });
   }
 

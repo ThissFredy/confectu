@@ -7,6 +7,8 @@ import { getCurrentWorkshopSettings } from "@/modules/workshops/queries";
 import { validateCustomerInput } from "@/modules/clients/validations";
 import {
   calculateInvoiceTotals,
+  MAX_ADJUSTMENTS,
+  MAX_LINES,
   parseDecimal,
   validateInvoiceInput,
 } from "./validations";
@@ -85,13 +87,19 @@ function coerceInvoiceActionResult(
 function parseLineCount(formData: FormData): number {
   const raw = formData.get("line_count");
   const parsed = parseDecimal(raw);
-  return parsed === null ? 0 : Math.floor(parsed);
+  if (parsed === null) {
+    return 0;
+  }
+  return Math.min(Math.floor(parsed), MAX_LINES + 1);
 }
 
 function parseAdjustmentCount(formData: FormData): number {
   const raw = formData.get("adj_count");
   const parsed = parseDecimal(raw);
-  return parsed === null ? 0 : Math.floor(parsed);
+  if (parsed === null) {
+    return 0;
+  }
+  return Math.min(Math.floor(parsed), MAX_ADJUSTMENTS + 1);
 }
 
 function parseLines(formData: FormData): InvoiceLineInput[] {
@@ -182,6 +190,105 @@ async function validateCustomerBelongsToWorkshop(
   return !!data && data.workshop_id === workshopId;
 }
 
+async function validateServicesBelongToWorkshop(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  lines: InvoiceLineInput[],
+  workshopId: string,
+): Promise<Record<string, string> | null> {
+  const serviceIds = [
+    ...new Set(
+      lines
+        .map((line) => line.serviceId)
+        .filter((serviceId): serviceId is string => serviceId !== null),
+    ),
+  ];
+
+  if (serviceIds.length === 0) {
+    return null;
+  }
+
+  const { data } = await supabase
+    .from("services")
+    .select("id")
+    .eq("workshop_id", workshopId)
+    .in("id", serviceIds);
+
+  const validIds = new Set((data ?? []).map((row) => row.id as string));
+  const fieldErrors: Record<string, string> = {};
+  let hasErrors = false;
+
+  lines.forEach((line, index) => {
+    if (line.serviceId && !validIds.has(line.serviceId)) {
+      fieldErrors[`line_${index}_service_id`] =
+        "El servicio no pertenece a tu taller.";
+      hasErrors = true;
+    }
+  });
+
+  return hasErrors ? fieldErrors : null;
+}
+
+function buildDraftRpcPayload(input: InvoiceInput) {
+  return {
+    p_customer_id: input.customerId,
+    p_payment_method: input.paymentMethod,
+    p_payment_instructions: input.paymentInstructions,
+    p_notes: input.notes,
+    p_lines: input.lines.map((line) => ({
+      service_id: line.serviceId,
+      description: line.description.trim(),
+      quantity: line.quantity,
+      unit_price_cop: line.unitPriceCop,
+    })),
+    p_adjustments: input.adjustments.map((adjustment) => ({
+      label: adjustment.label.trim(),
+      category: adjustment.category,
+      mode: adjustment.mode,
+      value: adjustment.value,
+    })),
+  };
+}
+
+function mapDraftRpcError(error: { message?: string }): InvoiceActionResult {
+  const message = error.message ?? "";
+
+  if (message.includes("customer does not belong")) {
+    return {
+      success: false,
+      fieldErrors: {
+        customer_id: "El cliente no existe o no pertenece a tu taller.",
+      },
+    };
+  }
+
+  if (message.includes("service does not belong")) {
+    return {
+      success: false,
+      error: "Uno de los servicios no pertenece a tu taller.",
+    };
+  }
+
+  if (message.includes("total cannot be negative")) {
+    return { success: false, error: "El total no puede ser negativo." };
+  }
+
+  if (message.includes("only draft invoices can be updated")) {
+    return { success: false, error: "Solo los borradores se pueden editar." };
+  }
+
+  if (message.includes("invoice does not belong")) {
+    return {
+      success: false,
+      error: "La factura no existe o no pertenece a tu taller.",
+    };
+  }
+
+  return {
+    success: false,
+    error: "No se pudo guardar el borrador. Intenta de nuevo.",
+  };
+}
+
 export async function createInvoiceDraft(
   formData: FormData,
 ): Promise<InvoiceActionResult> {
@@ -210,87 +317,33 @@ export async function createInvoiceDraft(
     };
   }
 
+  const serviceFieldErrors = await validateServicesBelongToWorkshop(
+    auth.supabase,
+    input.lines,
+    auth.workshopId,
+  );
+
+  if (serviceFieldErrors) {
+    return { success: false, fieldErrors: serviceFieldErrors };
+  }
+
   const totals = calculateInvoiceTotals(input.lines, input.adjustments);
   if (!totals.valid) {
     return { success: false, error: totals.error };
   }
 
-  const { data: invoiceData, error: invoiceError } = await auth.supabase
-    .from("invoices")
-    .insert({
-      workshop_id: auth.workshopId,
-      customer_id: input.customerId,
-      status: "draft",
-      currency: "COP",
-      subtotal_cop: totals.totals.subtotalCop,
-      total_adjustments_cop: totals.totals.totalAdjustmentsCop,
-      total_cop: totals.totals.totalCop,
-      payment_method: input.paymentMethod,
-      payment_instructions: input.paymentInstructions,
-      notes: input.notes,
-    })
-    .select("id")
-    .single();
+  const { data: invoiceId, error } = await auth.supabase.rpc(
+    "create_invoice_draft",
+    buildDraftRpcPayload(input),
+  );
 
-  if (invoiceError || !invoiceData) {
-    return {
-      success: false,
-      error: "No se pudo crear el borrador. Intenta de nuevo.",
-    };
-  }
-
-  const invoiceId = invoiceData.id as string;
-
-  if (input.lines.length > 0) {
-    const { error: linesError } = await auth.supabase.from("invoice_lines").insert(
-      input.lines.map((line) => ({
-        invoice_id: invoiceId,
-        service_id: line.serviceId,
-        description_snapshot: line.description.trim(),
-        quantity: line.quantity,
-        unit_price_cop: line.unitPriceCop,
-        line_total_cop: line.quantity * line.unitPriceCop,
-      })),
-    );
-
-    if (linesError) {
-      return {
-        success: false,
-        error: "No se pudieron guardar las líneas. Intenta de nuevo.",
-      };
-    }
-  }
-
-  if (input.adjustments.length > 0) {
-    const { error: adjustmentsError } = await auth.supabase
-      .from("invoice_adjustments")
-      .insert(
-        input.adjustments.map((adjustment, index) => {
-          const calculated = totals.totals.adjustments[index];
-          return {
-            invoice_id: invoiceId,
-            label: adjustment.label.trim(),
-            category: adjustment.category,
-            mode: adjustment.mode,
-            value: adjustment.value,
-            base_cop: calculated?.baseCop ?? 0,
-            amount_cop: calculated?.amountCop ?? 0,
-            effect: calculated?.effect ?? "add",
-            sort_order: index,
-          };
-        }),
-      );
-
-    if (adjustmentsError) {
-      return {
-        success: false,
-        error: "No se pudieron guardar los ajustes. Intenta de nuevo.",
-      };
-    }
+  if (error) {
+    console.error("[invoices] createInvoiceDraft", error);
+    return mapDraftRpcError(error);
   }
 
   revalidatePath("/invoices");
-  return { success: true, invoiceId };
+  return { success: true, invoiceId: invoiceId ?? undefined };
 }
 
 export async function updateInvoiceDraft(
@@ -310,9 +363,10 @@ export async function updateInvoiceDraft(
     .from("invoices")
     .select("id, workshop_id, status")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "La factura no existe o no pertenece a tu taller." };
   }
 
@@ -340,101 +394,29 @@ export async function updateInvoiceDraft(
     };
   }
 
+  const serviceFieldErrors = await validateServicesBelongToWorkshop(
+    auth.supabase,
+    input.lines,
+    auth.workshopId,
+  );
+
+  if (serviceFieldErrors) {
+    return { success: false, fieldErrors: serviceFieldErrors };
+  }
+
   const totals = calculateInvoiceTotals(input.lines, input.adjustments);
   if (!totals.valid) {
     return { success: false, error: totals.error };
   }
 
-  const { error: deleteAdjustmentsError } = await auth.supabase
-    .from("invoice_adjustments")
-    .delete()
-    .eq("invoice_id", id);
+  const { error } = await auth.supabase.rpc("update_invoice_draft", {
+    p_invoice_id: id,
+    ...buildDraftRpcPayload(input),
+  });
 
-  if (deleteAdjustmentsError) {
-    return {
-      success: false,
-      error: "No se pudieron actualizar los ajustes. Intenta de nuevo.",
-    };
-  }
-
-  const { error: deleteLinesError } = await auth.supabase
-    .from("invoice_lines")
-    .delete()
-    .eq("invoice_id", id);
-
-  if (deleteLinesError) {
-    return {
-      success: false,
-      error: "No se pudieron actualizar las líneas. Intenta de nuevo.",
-    };
-  }
-
-  const { error: updateError } = await auth.supabase
-    .from("invoices")
-    .update({
-      customer_id: input.customerId,
-      subtotal_cop: totals.totals.subtotalCop,
-      total_adjustments_cop: totals.totals.totalAdjustmentsCop,
-      total_cop: totals.totals.totalCop,
-      payment_method: input.paymentMethod,
-      payment_instructions: input.paymentInstructions,
-      notes: input.notes,
-    })
-    .eq("id", id);
-
-  if (updateError) {
-    return {
-      success: false,
-      error: "No se pudo actualizar el borrador. Intenta de nuevo.",
-    };
-  }
-
-  if (input.lines.length > 0) {
-    const { error: linesError } = await auth.supabase.from("invoice_lines").insert(
-      input.lines.map((line) => ({
-        invoice_id: id,
-        service_id: line.serviceId,
-        description_snapshot: line.description.trim(),
-        quantity: line.quantity,
-        unit_price_cop: line.unitPriceCop,
-        line_total_cop: line.quantity * line.unitPriceCop,
-      })),
-    );
-
-    if (linesError) {
-      return {
-        success: false,
-        error: "No se pudieron guardar las líneas. Intenta de nuevo.",
-      };
-    }
-  }
-
-  if (input.adjustments.length > 0) {
-    const { error: adjustmentsError } = await auth.supabase
-      .from("invoice_adjustments")
-      .insert(
-        input.adjustments.map((adjustment, index) => {
-          const calculated = totals.totals.adjustments[index];
-          return {
-            invoice_id: id,
-            label: adjustment.label.trim(),
-            category: adjustment.category,
-            mode: adjustment.mode,
-            value: adjustment.value,
-            base_cop: calculated?.baseCop ?? 0,
-            amount_cop: calculated?.amountCop ?? 0,
-            effect: calculated?.effect ?? "add",
-            sort_order: index,
-          };
-        }),
-      );
-
-    if (adjustmentsError) {
-      return {
-        success: false,
-        error: "No se pudieron guardar los ajustes. Intenta de nuevo.",
-      };
-    }
+  if (error) {
+    console.error("[invoices] updateInvoiceDraft", error);
+    return mapDraftRpcError(error);
   }
 
   revalidatePath("/invoices");
@@ -459,9 +441,10 @@ export async function issueInvoice(
     .from("invoices")
     .select("id, workshop_id, status, customer_id, payment_instructions")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "La factura no existe o no pertenece a tu taller." };
   }
 
@@ -517,6 +500,37 @@ export async function issueInvoice(
     }),
   );
 
+  let paymentInstructions = String(
+    formData.get("payment_instructions") ?? "",
+  ).trim();
+
+  if (paymentInstructions.length === 0) {
+    paymentInstructions =
+      typeof existing.payment_instructions === "string" &&
+      existing.payment_instructions.trim().length > 0
+        ? existing.payment_instructions.trim()
+        : "";
+  }
+
+  if (paymentInstructions.length === 0) {
+    const settings = await getCurrentWorkshopSettings(auth.supabase);
+    paymentInstructions = settings?.paymentInstructions ?? "";
+  }
+
+  const input: InvoiceInput = {
+    customerId: existing.customer_id,
+    lines,
+    adjustments,
+    paymentMethod,
+    paymentInstructions: paymentInstructions.length > 0 ? paymentInstructions : null,
+    notes: null,
+  };
+
+  const validation = validateInvoiceInput(input);
+  if (!validation.valid) {
+    return validation.result;
+  }
+
   const totals = calculateInvoiceTotals(lines, adjustments);
   if (!totals.valid) {
     return { success: false, error: totals.error };
@@ -543,23 +557,6 @@ export async function issueInvoice(
     };
   }
 
-  let paymentInstructions = String(
-    formData.get("payment_instructions") ?? "",
-  ).trim();
-
-  if (paymentInstructions.length === 0) {
-    paymentInstructions =
-      typeof existing.payment_instructions === "string" &&
-      existing.payment_instructions.trim().length > 0
-        ? existing.payment_instructions.trim()
-        : "";
-  }
-
-  if (paymentInstructions.length === 0) {
-    const settings = await getCurrentWorkshopSettings(auth.supabase);
-    paymentInstructions = settings?.paymentInstructions ?? "";
-  }
-
   const { data: issuedNumber, error: issueError } = await auth.supabase.rpc(
     "issue_invoice",
     {
@@ -574,6 +571,13 @@ export async function issueInvoice(
       return {
         success: false,
         error: "El cliente no está activo. Reactívalo antes de emitir.",
+      };
+    }
+
+    if (issueError.message.includes("customer does not belong")) {
+      return {
+        success: false,
+        error: "La factura no es válida. Vuelve a crearla.",
       };
     }
 
@@ -617,9 +621,10 @@ export async function voidInvoice(formData: FormData): Promise<InvoiceActionResu
     .from("invoices")
     .select("id, workshop_id, status")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "La factura no existe o no pertenece a tu taller." };
   }
 
@@ -661,9 +666,10 @@ export async function deleteInvoice(
     .from("invoices")
     .select("id, workshop_id, status")
     .eq("id", id)
+    .eq("workshop_id", auth.workshopId)
     .single();
 
-  if (!existing || existing.workshop_id !== auth.workshopId) {
+  if (!existing) {
     return { success: false, error: "La factura no existe o no pertenece a tu taller." };
   }
 

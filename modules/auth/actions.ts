@@ -10,9 +10,19 @@ import type { AuthActionResult } from "./types";
 export async function signInWithGoogle(formData: FormData): Promise<never> {
   const supabase = await createClient();
   const headersList = await headers();
-  const origin =
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  let origin =
     headersList.get("origin") ??
     `https://${headersList.get("host") ?? "localhost"}`;
+
+  if (configuredSiteUrl) {
+    try {
+      origin = new URL(configuredSiteUrl).origin;
+    } catch {
+      console.error("[auth] NEXT_PUBLIC_SITE_URL inválido:", configuredSiteUrl);
+    }
+  }
 
   const next = formData.get("next");
   const nextParam =
@@ -85,9 +95,10 @@ export async function completeWorkshopSetup(
   });
 
   if (error) {
+    console.error("[auth] completeWorkshopSetup", error);
     return {
       success: false,
-      error: error.message,
+      error: "No se pudo completar la configuración. Intenta de nuevo.",
     };
   }
 
