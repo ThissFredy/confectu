@@ -16,6 +16,7 @@ function formatDateTime(value: string | null): string {
   }
 
   return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
     year: "numeric",
     month: "long",
     day: "numeric",
